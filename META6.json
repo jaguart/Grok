@@ -1,0 +1,25 @@
+{
+  "auth": "zef:jaguart",
+  "authors": [
+    "Jeff Armstrong"
+  ],
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "blah blah blah",
+  "license": "Artistic-2.0",
+  "name": "Grok",
+  "perl": "6.d",
+  "provides": {
+    "Grok": "lib/Grok.rakumod"
+  },
+  "resources": [
+  ],
+  "source-url": "",
+  "tags": [
+  ],
+  "test-depends": [
+  ],
+  "version": "0.0.1"
+}
