@@ -12,11 +12,14 @@
   "name": "Grok",
   "perl": "6.d",
   "provides": {
-    "Grok": "lib/Grok.rakumod"
+    "Grok": "lib/Grok.rakumod",
+    "Grok::Inspector": "lib/Grok/Inspector.rakumod",
+    "Grok::Moppet": "lib/Grok/Moppet.rakumod",
+    "Grok::Utils": "lib/Grok/Utils.rakumod"
   },
   "resources": [
   ],
-  "source-url": "",
+  "source-url": "https://github.com/jaguart/Grok.git",
   "tags": [
   ],
   "test-depends": [
