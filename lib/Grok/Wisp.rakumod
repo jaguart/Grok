@@ -1,224 +1,173 @@
-use v6.d;
+use v6d+;
 
-use Grok::Utils :is-core-class, :cleanup-mop-name, :is-type-class;
+use Grok::Moppet;
 
-unit module Grok::Wisp;
+#------------------------------------------------------------------------------
+#| A prettier .gist from MOP for almost anything.
+#| .gist  from .ident .whom .what .where .detail .why.
+#| .mop is accessible - possible anti-pattern - maybe we should delegate?
+#------------------------------------------------------------------------------
+unit class Wisp is export;
 
-#| A small wisp that provides .thing .gist .detail for info from the MOP.
-class Base {
+has Mu    $.thing is built(:bind);
+has Grok::Moppet $.mop;
 
-  has Mu    $.thing is required;
-  has Str   $.ident;      #= external name / identity
-  has Str   $.prefix;     #= prefix after .ident
-  has Str   $.name;       #= internal name
-  has Str   $.supertype;  #= parent-type description
-  has Str   $.type;       #= type description
-  has Str   $.subtype;    #= subtype description, e.g. Multi, Private
-  has Str   $.gist;       #= main .gist content
-  has Str   $.suffix;     #= suffix after gist
-  has Str   $.extra;      #= extra for .detail
-  has Str   $.why;        #= Declarator POD
-  has Bool  $.debug;      #= Debug Wisp construction
+has Str   $!ident = '';   # External name/identity
+has Str   $!whom = '';    # Who I think I am
+has Str   $!what = '';    # What am I
+has Str   $!where = '';   # Where am I
+has Str   $!detail = '';  # Extra details that I only reveal when asked
+has Str   $!why = '';     # Why I am
 
-  submethod TWEAK ( ) {
+has Bool $!debug = False;
 
-    $!subtype     //= '';
-    $!extra       //= '';
-    $!why         //= '';
-    $!prefix      //= '';
-    $!suffix      //= '';
-    $!debug       //= False ;
+#------------------------------------------------------------------------------
+submethod TWEAK {
 
-    $!ident       //= '';                               # External name
+  $!mop = Moppet.new( :thing($!thing ) ) unless $!mop;
 
-    try $!name    //= $!thing.name;                     # Local name
+  #    say 'wisp.ident   ', $!ident;
+  #try say 'thing.ident: ', $!thing.ident;
+  #try say 'thing.name:  ', $!thing.name;
+  #try say 'mop.ident:   ', $!mop.ident;
 
-    if not $!thing.DEFINITE {
-      try $!name    //= cleanup-mop-name($!thing.^name);  # Class Name
+  $!whom =  $!mop.ident         ||    # sometimes we have an external identity
+            $!mop.var-name      ||    # sometimes we are a var
+            $!mop.name          ||    # sometimes we have a name
+            $!mop.type          ||    # sometimes we are a Type
+            $!thing.Str               # hmmm, we always need a $!whom
+            ;
+
+  #say '^name:     ', $!mop.thing.^name;
+  #say 'subtype:   ', $!mop.subtype; # proto multi private etc
+  #say 'type:      ', $!mop.type;    # just the base type
+  #say 'which:     ', $!mop.which;   # includes any mixins
+  #say 'supertype: ', $!mop.supertype;
+  #say 'is-core:   ', $!mop.is-core;
+  #say 'is-class:  ', $!mop.is-class;
+
+
+  my $type = $!whom ne $!mop.type ?? $!mop.which || $!mop.type || '' !! '';
+  $type = '' if $!mop.subtype and $!mop.type eq 'Attribute';
+
+  my $supertype =  $!mop.not-core || $!mop.not-class ?? $!mop.supertype !! '';
+  $supertype = '' if $supertype eq 'Class'; # noise vs signal?
+
+
+    $!what    = (
+                 ($!mop.name eq $!whom | '<anon>' | $type ).so ?? '' !! $!mop.name,
+                 $!mop.signature // '',
+                 $!mop.subtype //'',
+                 $type,
+                 $!mop.descr,
+                 $supertype,
+                )
+                .grep(*.chars)
+                .join(' ');
+
+     #say ': name      ', ($!mop.name ne $!whom and $!mop.name ne '<anon>') ?? $!mop.name !! '',     ;
+     #say ': signiture ', $!mop.signature // '',                                                     ;
+     #say ': subtype   ', $!mop.subtype //'',                                                        ;
+     #say ': type      ', $type,                                                                     ;
+     #say ': descr     ', $!mop.descr,                                                               ;
+     #say ': supertype ', $supertype,                                                                ;
+
+
+    $!what ||= $!mop.supertype;
+
+    #say 'whom:    ', $!whom;
+    #say 'what:    ', $!what;
+    #say 'type:    ', $type;
+    #say 'package: ', $!mop.package;
+
+    # Add Parents and Roles
+    if $!what eq $!mop.supertype {
+      $!what ~= ' is: ' ~ $!mop.parent-names.join(' ') if $!mop.parent-names.elems;
+      $!what ~= ' does: ' ~ $!mop.role-names.join(' ') if $!mop.role-names.elems;
     }
-    $!name //= '';
+    $!what ~= ' enums: ' ~ $!mop.enum-names.join(' ') if $!mop.enum-names.elems;
 
-    # Type and subtype
-    try $!type    //= $!thing.type.^name;               # Attributes have .type
-    $!type        //= $!thing.^name;                    # Class name
+    $!where = '';
+    $!where = $!mop.package(:prefix('in '))
+       unless $!mop.package eq $!whom;
+#      unless set $!whom, $!what, $type (&) $!mop.package;
 
-    # Type - blank or one-up the hierarchy?
-    #$!type         = '' if $!type eq $!name;
-    $!type          = $!thing.HOW.^name if $!type eq $!name;
+    # Failed on ForeignCode
+    #$!where   = (
+    #              ($!mop.package ne $!whom ?? $!mop.package(:prefix('in ')) !! ''),
+    #            ).grep(*.chars).unique.join(' ');
 
-    $!type          = cleanup-mop-name( $!type );
-
-    $!subtype       //= cleanup-mop-name( $!thing.HOW.^name );
-    $!subtype       = '' if $!subtype eq $!type;
-    $!subtype       //= '';
-
-    $!supertype       //= '';
-
-    #say "i: $!ident n: $!name t: $!type s: $!subtype";
-
-    my $short = $!name.split('::').tail;
-
-    # Jeff 29-Dec-2022 NQPAttribute doesn't have a .gist
-    $!gist    //= $!type eq 'Str' ?? $!thing.raku !! try $!thing.gist;  # Str -> .raku == with quotes
-    $!gist    //= '';
-
-    # Jeff 29-Dec-2022 .gist by default often contains details added elsewhere, so we sometimes ignore it
-    $!gist      = '' if $!gist eq $!name;           #
-    $!gist      = '' if $!gist eq "($!name)";       # (Any)
-    $!gist      = '' if $!gist eq "($short)";       # (Innie)
-    $!gist      = '' if $!gist eq "$!type $!name";  # bigint $!value - but not ~~ Attribute
-
-    # Jeff 29-Dec-2022 this is a loooong builtin .gist
-    $!gist      = 'Rakudo specific' if $!gist.contains("Rakudo-specific", :i);
+    #say 'where:   ', $!where;
 
 
+  #}
+
+  # Jeff 01-Jan-2023 keep this useful debug
+  #$!where ~= ' ' ~ $!thing.WHICH if try $!thing.WHICH;
+
+
+    $!detail   = (
+                  $!mop.file,
+                ).grep(*.chars).unique.join(' ');
+
+  # POD or Exception Message
+  $!why     = S:g/ \n / \c[SYMBOL FOR NEWLINE] / given ( $!mop.why || $!mop.message );
+
+
+
+}
+
+# whom  - ident || name + signature
+# what  - name if ident, subtype type supertype origin
+# where - further details
+# why   - declarators
+
+# $notware can be:
+#   False -> no $where is displayed,
+#   Str   -> $!where is not displayed if it is the same as the Str value
+method gist ( :$format="%s", :$detail = False, :$notwhere = False, :$debug = $!debug --> Str ) {
+
+  #say 'ident:  ', $!ident;
+  #say 'whom:   ', $!whom;
+  #say 'what:   ', $!what;
+  #say 'where:  ', $!where;
+  #say 'detail: ', $!detail;
+  #say 'why:    ', $!why;
+
+  # Note that $detail forces inclusion of $!where
+  # and overrides any setting in $notwhere
+  my $where = $!where;
+  if not $detail {
+    given $notwhere {
+      when Str  { $where = '' if $notwhere and $where.contains($notwhere) }
+      when Bool { $where = '' if $notwhere.so }
+    }
   }
 
-  #| gist --> :format.sprintf(name) prefix type gist why
-  #
-  # Any --> $name Any - $type Class
-  # Mu --> $name Mu - $type Class
-
-
-  # whom    - ident || name + signature
-  # descr   - name if ident, subtype type supertype origin
-  # detail  - further details
-  # pod     - declarators
-
-
-  method gist ( :$format="%s", :$detail=False, :$debug=$!debug --> Str ) {
-    # final tweaks to remove duplicated values
-    my $ident = $!ident || $!name;
-    my $name  = $ident.contains($!name)   ?? '' !! $!name;
-    my $gist  = $ident.contains($!gist)   ?? '' !! $!gist;
-    my $type  = $ident.contains($!type)   ?? '' !! $!type;
-
-    my $divider = $ident.chars + $!prefix.chars ?? '-' !! '';
+  my $divider = '-';
 
     (
-      $format.sprintf($ident),
-      $!prefix,
+      $format.sprintf($!whom),
       $divider,
-      $name,
-      $gist,
-      $!subtype,    # Multi
-      $type,        # Method
-      $!supertype,  # Class
-      $!suffix,
-      $detail ?? $!extra !! '',
-      ( $!why ?? ('#', $!why ) !! () ),
-      ($debug ?? 'by ' ~ self.^name !! '' )
+      $!what,
+      $where,
+      ( $detail   ?? $!detail   !! '' ),
+      ( $!why ?? ('#', $!why )  !! () ),
+      ($debug ?? 'by ' ~ self.^name !! '' ),
     )
     .map({ $debug ?? ($_, '‧') !! $_ })
     .grep( *.chars )
     .join(' ');
-  }
-
-  #| detail --> :format.sprintf(name) prefix type gist extra why
-  method detail ( |arg --> Str ) {
-    self.gist( :detail, |arg );
-  }
 
 }
 
-#| Add POD Declarators to .gist/.detail
-class Whyish is Base {
-  multi method new (|args) {
-    callwith(
-      :why( try { args<thing>.?WHY } ?? args<thing>.?WHY.contents.join('?') !! '' ),
-      |args,
-    );
-  }
-}
+  # Accessors - but not constructor args.
+  method ident  { $!ident   }
+  method whom   { $!whom    }
+  method what   { $!what    }
+  method where  { $!where   }
+  method detail { $!detail  }
+  method why    { $!why     }
 
-#| .gist and .detail for custom Classes
-class Classish is Whyish {
-  multi method new(|args) {
-    callwith(
-      :gist(''),
-      #:extra( ( "args<thing>.file.split(' ')[0], args<thing>.line", ).join(' ') ), <-- ditto
-      |args
-    );
-  }
-}
 
-#| .gist..detail for Code like things.
-class Codeish is Whyish {
-  multi method new(|args) {
 
-    my $subtype = args<subtype> // '';
-    my $type    = args<thing>.^name.split('+')[0];
-
-    my $sig     = try { args<thing>.signature.gist }  // '';
-    my $of      = try { args<thing>.of.^name }        // '';
-    my $suffix  = try { 'in ' ~ args<thing>.package.^name } // '';
-    my $extra   = try { args<thing>.file.split(' ')[0] ~ ' ' ~ args<thing>.line } // '';
-
-    # Jeff 23-Dec-2022 https://docs.raku.org/language/nativecall#Passing_and_returning_values
-    # 'Note that the lack of a returns trait is used to indicate void return type'
-    # but this yields --> Mu
-
-    callwith(
-      :prefix( (
-          $sig,
-          $sig.contains('--> ') ?? Empty
-            !! $of eq 'Mu'      ?? Empty
-            !! ('-->', $of),
-        ).grep(*.chars).join(' ') ),
-      :suffix( $suffix ),
-      :extra( $extra ),
-      |args,
-
-    );
-  }
-}
-
-#| .gist/.detail for Attributes.
-#  Jeff 21-Dec-2022 - note there are NQP leakages that can fail here.
-class Attrish is Whyish {
-  multi method new(|args) {
-    my $attribute = args<thing>;
-    my @descr =
-          ##$attribute.type.^name,
-          $attribute.?DEPRECATED  ?? 'DEPRECATED: [' ~ $attribute.DEPRECATED ~ ']' !! '',
-             $attribute.?required ~~ Str  ?? 'required: [' ~  $attribute.?required ~ ']'
-          !! $attribute.?required         ?? 'required'
-          !! '',
-          $attribute.has_accessor ?? 'public'       !! 'private',
-          $attribute.?rw          ?? 'read-write'   !! 'read-only',
-          ;
-    callwith(
-      :suffix( @descr.grep(*.chars).join(' ') ),
-      :gist( '' ), # suppress - duplicates name, type and suffix
-      |args
-    );
-  }
-}
-
-#| Formatted .gist/.detail for MOP Inspectors
-class Wisp is export {
-
-  #| returns a specialised sub-class.
-  method new (|args) {
-
-    my $thing := args<thing>;
-    my $ident = args<ident> // '';
-
-    if $thing ~~ Pair and $thing.DEFINITE and !$ident {
-      $thing := args<thing>.value;
-      $ident  = args<thing>.key;
-    }
-
-    return Codeish.new(|args, :thing($thing), :ident($ident) )  if $thing ~~ Code;
-    return Attrish.new(|args, :thing($thing), :ident($ident) )  if $thing ~~ Attribute;
-
-    # Differentiate core-classes from custom-classes
-    # <gfldex> m: say CORE::<Any> =:= Any;
-    return Classish.new(|args, :thing($thing), :ident($ident) )
-      if  is-type-class($thing) and not is-core-class($thing);
-
-    # We assume that it might have POD Declarators
-    return Whyish.new(|args, :thing($thing), :ident($ident) );
-  }
-
-}
