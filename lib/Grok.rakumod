@@ -1,104 +1,161 @@
+use v6.d+;
+
 unit module Grok;
 
-use Grok::Inspector;
-use Grok::Utils :is-core-class;
+use Grok::Wisp;
 
-sub _pad ( Str $str ) {  return $str.chars ?? ' ' ~ $str ~ ' ' !! ''; }
+use Grok::Utils :is-core-class, :header-line;
 
-#our %SEEN;
+# recursion control
+our $DEPTH;
+our %SEEN;
 
 #-------------------------------------------------------------------------------
 #| Introspect a thing.
 #| :deeply -> recurse into parents, roles etc;
 #| :core -> include core classes.
+#| :local -> skip composed / imported methods
+#| :detail -> include extra detail
 sub grok (
     Mu $thing is raw,
-    :$deeply  =False,
-    :$core    =False,
-    --> Grok::Inspector:D
+    :$deeply  = False,
+    :$core    = False,
+    :$local   = False,
+    :$detail  = False,
+    :$where   = Nil,
   ) is export {
 
-    our %SEEN;
-    _grok( $thing, %SEEN, :$deeply, :$core);
+  $DEPTH = 0;
+  %SEEN = ();
+
+  #say
+  #  'grok: ',
+  #    (
+  #      $deeply  ?? ':deeply' !! '' ,
+  #      $core    ?? ':core'   !! '' ,
+  #      $local   ?? ':local'  !! '' ,
+  #      $detail  ?? ':detail' !! '' ,
+  #      $where   ?? ':where'  !! '' ,
+  #    )
+  #    .grep( *.so )
+  #    .join(' ') || 'defaults',
+  #    ;
+
+  _grok( $thing, :$deeply, :$core, :$local, :$detail, :$where );
 
 }
-
 
 #-------------------------------------------------------------------------------
 #| internal - for recursion
 sub _grok (
     Mu $thing is raw,
-    %SEEN is raw,
     :$deeply,
     :$core,
+    :$local,
+    :$detail,
+    :$where,
     :$context = '',
-    :$ident   = '',
-    --> Grok::Inspector:D
   ) {
 
   return if %SEEN{$thing.WHICH}++;
-  return if !$core and is-core-class($thing);
 
+  # The count is just in case we directly grokked a core
+  return if !$core && is-core-class($thing) && %SEEN.elems > 1 ;
 
-  my $layout = '%-20s: ';
-  my $inspector = Grok::Inspector.new( $thing, :$ident );
+  #say header-line( $context );
+  my $prefix = '  ';
 
-  say ('--' ~ _pad($context || $inspector.descr ) ~ '-' x 80).substr(0,80);
+  my $wisp = Wisp.new(:thing($thing));
 
-  for <
-    ident
-    name
-    raku
-    type
-    var
-    var-name
-    var-type
-    var-of
-    why
-  > -> $method {
-    #if $inspector."$method"() -> $descr {
-    #  say $layout.sprintf($method), $descr // 'undef';
-    #} else {
-      say $layout.sprintf($method), $inspector."$method"();
-    #}
+  say $wisp.gist( :$detail, :notwhere($wisp.mop.package)  );
+
+  # $notwhere controls whether gist includes 'where' aka 'in ' ~ .package.
+  # To reduce noise, we suppress in-package on local attributes and methods
+  # $notwhere should be:
+  #   True    -> DON'T  gist in-package at all.
+  #   False   -> ALWAYS gist in-package
+  #   String  -> ONLY   gist in-package when NOT this string
+  #
+  # Note that $detail overrides $notwhere in Wisp
+  #
+  my $notwhere =
+    do given $where {
+      when Bool:D { not $where }
+      default     { $wisp.mop.package }
+    };
+
+  for $wisp.mop.parents( :all, :$local ) -> $parent {
+    say $prefix, Wisp.new(:thing($parent)).gist( :$detail );
   }
 
+  for $wisp.mop.roles( :all, :$local ) -> $role {
+    say $prefix, Wisp.new(:thing($role)).gist( :$detail );
+  }
 
-  for <
-    exports
-    #knows
-    parents
-    roles
-    attributes
-    methods
-  > -> $method {
-    next if $method.starts-with: '#';
+  for $wisp.mop.attributes( :$local, ) -> $attribute {
+    say $prefix, Wisp.new(:thing($attribute)).gist( :$detail, :$notwhere );
+  }
 
-    say $layout.sprintf($method), $_.gist for $inspector."$method"();
-
+  for $wisp.mop.methods( :$local ) -> $method {
+    say $prefix, Wisp.new(:thing($method)).gist( :$detail, :$notwhere );
   }
 
   say '';
 
   if $deeply {
-    for $inspector.exports -> $wisp {
-      _grok( $wisp.thing, %SEEN, :ident($wisp.ident), :context( $inspector.descr ~ ' export'), :$deeply, :$core );
+
+    $DEPTH++;
+    for $wisp.mop.parents( :all, :$local ) -> $parent {
+      _grok(
+          $parent,
+          :$deeply,
+          :$core,
+          :$local,
+          :$detail,
+          :$where,
+          :context( $wisp.whom ~ ' parent ' ~ $DEPTH )
+        );
     }
-    for $inspector.parents.map( *.thing ) -> $item {
-      _grok( $item, %SEEN, :context( $inspector.descr ~ ' parent'), :$deeply, :$core );
+    for $wisp.mop.roles( :all, :$local ) -> $role {
+      _grok(
+          $role,
+          :$deeply,
+          :$core,
+          :$local,
+          :$detail,
+          :$where,
+          :context( $wisp.whom ~ ' role ' ~ $DEPTH )
+        );
     }
-    for $inspector.roles.map( *.thing ) -> $item {
-      _grok( $item, %SEEN, :context( $inspector.descr ~ ' role'), :$deeply, :$core );
-    }
+    $DEPTH--;
   }
 
-
-  $inspector;
+  return;
 
 }
 
+#-------------------------------------------------------------------------------
+#| Describe a thing.
+sub wisp (
+    Mu $thing is raw,
+    :$detail  = False,
+    :$where   = Nil,
+  ) is export {
+
+  my $wisp = Wisp.new(:thing($thing));
+  my $notwhere =
+    do given $where {
+      when Bool:D { not $where }
+      default     { $wisp.mop.package }
+    };
+
+  say $wisp.gist( :$detail, :$notwhere );
+
+}
 
 =begin pod
+
+![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
 
 =head1 NAME
 
