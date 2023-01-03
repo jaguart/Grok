@@ -3,6 +3,7 @@ use v6.d;
 # mi6 has it's own opinion
 #![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
 # Much of the POD layout etc is due to how mi6 does POD.
+# Some of the Declarator content is for markdown - hmmm
 
 =begin pod
 

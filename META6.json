@@ -13,9 +13,9 @@
   "perl": "6.d",
   "provides": {
     "Grok": "lib/Grok.rakumod",
-    "Grok::Inspector": "lib/Grok/Inspector.rakumod",
     "Grok::Moppet": "lib/Grok/Moppet.rakumod",
-    "Grok::Utils": "lib/Grok/Utils.rakumod"
+    "Grok::Utils": "lib/Grok/Utils.rakumod",
+    "Grok::Wisp": "lib/Grok/Wisp.rakumod"
   },
   "resources": [
   ],
