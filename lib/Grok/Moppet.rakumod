@@ -2,26 +2,24 @@ use v6.d;
 
 use Grok::Utils :cleanup-mop-name, :is-core-class, :cleanup-which-name;
 
+#------------------------------------------------------------------------------
 #| Easier interface to the MOP - which can be inconsistent / error prone.
-#  e.g. role.^methods doesn't return multi-methods etc.
-#  Note that we always use the _table_ calls when we can, see
-#  https://github.com/rakudo/rakudo/issues/4207#issuecomment-782836089
-#  for a discussion on how a Block may have an incorrect idea of it's
-#  class accessor name.
-
+#|  e.g. role.^methods doesn't return multi-methods etc.
+#|  Note that we always use the _table_ calls when we can, see
+#|  https://github.com/rakudo/rakudo/issues/4207#issuecomment-782836089
+#|  for a discussion on how a Block may have an incorrect idea of it's
+#|  class accessor name.
 unit class Grok::Moppet:auth<zef:jaguart> is export;
 
+  # Used to adorn methods with their external name and subtype - i.e. Multi Private
   role Subtyped[$t]   {  has Str $.subtype = $t }
   role Identified[$i] {  has Str $.ident = $i   }
 
-  #| The Mu being inspected
+  #| The Mu being introspected
   has $.thing;
 
   #| The Mu's HOW
   has $!how;
-
-  #| our .key if we are the .value of a pair...
-  has $!key;
 
   #| Attribute sorting: required, accessible, private, DEPRECATED
   my &sort-attributes = {
@@ -36,29 +34,20 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
         $^a.name cmp $^b.name
     };
 
-  submethod TWEAK ( Mu :$thing is raw, :$key='' ) {
+  submethod TWEAK ( Mu :$thing is raw,  ) {
     $!thing := $thing;
-    $!how   = $!thing.HOW;
-    $!key   = $key;
+    $!how    = $!thing.HOW;
   }
 
-  # My EXTERNAL name - unknown to thing
+  #! EXTERNAL name - unknown to thing
   method ident ( --> Str ) {
     return $!thing.ident if try $!thing.ident;
     return '';
   }
 
-  # My INTERNAL name, see also: .var-name for Scalar vars
+  #| INTERNAL name, see also: .var-name for Scalar vars
   method name ( --> Str ) {
-    #return $!key if $!key;
-    #return $!thing<>.Str if self.is-core and self.is-definite;
-
-    #try {
-    #  say 'my ident: ', $!thing.ident;
-    #  say 'my name: ', $!thing.name;
-    #}
-
-    return $!thing.name if try $!thing.name;
+    return $!thing.name  if try $!thing.name;
     return $!thing.^name if self.not-core;
     return '';
   }
@@ -67,19 +56,19 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     $!thing ~~ Method
   }
 
-  method is-submethod ( --> Bool:D ) {
-    $!thing ~~ Submethod
-  }
+  #method is-submethod ( --> Bool:D ) {
+  #  $!thing ~~ Submethod
+  #}
 
-  method is-routine ( --> Bool:D ) {
-    $!thing ~~ Routine
-  }
+  #method is-routine ( --> Bool:D ) {
+  #  $!thing ~~ Routine
+  #}
 
   method is-proto-method ( --> Bool:D ) {
     self.is-method and self.var-value.starts-with('proto')
   }
 
-  #| Subtype e.g. for Methods: Private Multi
+  #| Subtype e.g. for Methods: proto private Multi
   method subtype ( --> Str ) {
     return 'proto' if self.is-proto-method;
 
@@ -87,7 +76,7 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     return $!thing.subtype if try $!thing.subtype;
 
     if $!thing ~~ Attribute and $!thing.WHICH ne Attribute.WHICH {
-      return $!thing.type.^name
+      return $!thing.type.^name;
     }
 
     return '';
@@ -103,10 +92,12 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     return cleanup-mop-name($!how.^name);
   }
 
+  #| parent type - usually Class, Role, Subtype etc.
   method supertype ( --> Str ) {
     return 'Role' if self.is-role;
     return cleanup-mop-name($!how.^name);
   }
+
 
   method var {
     #say $!thing.WHICH, " vs ", $!thing.VAR.WHICH, ' d: ', $!thing.DEFINITE;
@@ -116,35 +107,27 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     #return Nil;
   }
 
-  method var-type-name (  ) {
+  method var-type-name ( --> Str ) {
     $!thing.DEFINITE ?? $!thing.VAR.^name !! '';
     #$!thing.VAR.^name
   }
 
-  method var-of ( ) {
+  method var-of {
     $!thing.DEFINITE ?? $!thing.VAR.?of !! Nil;
-    #try return $!thing.VAR.of;
-    #return Nil
   }
 
-  method var-name ( ) {
+  method var-name ( --> Str ) {
     try return $!thing.VAR.name;
     return '';
   }
 
   method var-value {
-    #say $!thing.WHICH, " vs ", $!thing.VAR.WHICH, ' d: ', $!thing.DEFINITE;
-
-    # Grammar ->  Role: NQPParametricRoleHOW
-    return '' if not try $!thing.VAR.raku;
-
+    return '' unless try $!thing.VAR.raku; # Grammar ->  Role: NQPParametricRoleHOW
     $!thing.DEFINITE ?? $!thing.VAR.raku !! '';
-    #return $!thing.VAR.gist if $!thing.DEFINITE;
-    #return $!thing.VAR if $!thing.DEFINITE;
-    #return Nil;
   }
 
   #| aka POD declarators
+  #| tip: export RAKUDO_POD_DECL_BLOCK_USER_FORMAT=1 to get your declarators looking pretty.
   method why ( --> Str ) {
     # Routine.WHY fails
     try return $!thing.?WHY ?? $!thing.WHY.gist !! '';
@@ -160,14 +143,15 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
    # say $layout.sprintf("ours"), $thing.WHO.keys.join(' ') if $thing.WHO.?elems;  # Stash names
   }
 
+  # This was hard to get right... feels fragile
   method exports ( :$which = 'ALL' ) {
-
     if try $!thing.WHO<EXPORT>.WHO<< $which >>.WHO.elems {
       return $!thing.WHO<EXPORT>.WHO<< $which >>.WHO.sort;
     }
     return Empty;
   }
 
+  #| Parents of this thing - Subset is not quite there yet.
   method parents () {
 
     if try $!how.?parents($!thing, :all) {
@@ -192,6 +176,7 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
 
   method roles {
     try {
+      # Normal things
       if $!how.?roles($!thing) {
         return $!thing.^roles(:transitive);
       }
@@ -204,12 +189,15 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     }
     return Empty;
   }
+
   method role-names     { self.roles.map( *.^name );    }
 
-
+  # Attributes have a log of NQP - performance maybe?
   method attributes {
 
     if try $!how.?attributes($!thing) {
+      # Not all Attributes have everything needed to sort
+      # i.e.: required, accessible, private, DEPRECATED
       try return $!thing.^attributes.sort(&sort-attributes);
       return $!thing.^attributes.sort(&sort-attribute-names);
     }
@@ -222,8 +210,7 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
    return $rw ?? True !! False;
   }
 
-
-  # Note that Submethods are NOT Methods
+  #| Note that Submethods are NOT Methods -but they ARE returned by .methods( :all )
   method submethods {
     my @methods;
     if $!how.?submethod_table($!thing) {
@@ -233,8 +220,12 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
           })
       }
     }
-    return Empty unless @methods.elems;
-    return |@methods.Slip;
+    # Must be a better pattern for returning an empty list.
+    # return |@a returns a NIL for empty @a
+    # Have to see if we really need to do anything...
+    ##return Empty unless @methods.elems;
+    ##return |@methods.Slip;
+    return @methods;
   }
 
   #----------------------------------------------------------------------------
@@ -315,9 +306,10 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
         ($^a.?signature.gist //'' ) cmp  ($^b.?signature.gist //'' )
       });
 
-    # Jeff 31-Dec-2022 always an iterable, never a Nil
-    return Empty unless @methods.elems;
-    return |@methods.Slip;
+    ## Jeff 31-Dec-2022 always an iterable, never a Nil
+    #return Empty unless @methods.elems;
+    #return |@methods.Slip;
+    return @methods;
 
   }
 
@@ -330,8 +322,10 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
           });
       }
     }
-    return @methods.Slip if @methods.elems;
-    return Empty;
+    #return @methods.Slip if @methods.elems;
+    #return Empty;
+    return @methods;
+
   }
 
   #| Specifically for Roles,
@@ -349,8 +343,10 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
          $_.value<> but (Identified[$_.key], Subtyped['multi'] )
       });
     }
-    return Empty unless @methods.elems;
-    return |@methods.Slip;
+
+    #return Empty unless @methods.elems;
+    #return |@methods.Slip;
+    return @methods;
   }
 
   method methods-private {
@@ -362,8 +358,9 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
           });
       }
     }
-    return Empty unless @methods.elems;
-    return |@methods.Slip;
+    #return Empty unless @methods.elems;
+    #return |@methods.Slip;
+    return @methods;
   }
 
   method which ( --> Str ) {
