@@ -7,6 +7,8 @@ use v6.d;
 
 =begin pod
 
+![Version](https://raku.land/zef:jaguart/Grok/badges/version)
+
 =head1 NAME
 
 grok, wisp - introspection helpers.
@@ -220,7 +222,7 @@ my sub _grok (
 }
 
 #-------------------------------------------------------------------------------
-#| An introspection helper - provides .gist and .detail
+#| An introspection helper - provides **.gist** and **.detail**
 sub wisp ( Mu $thing is raw --> Wisp ) is export(:DEFAULT,:wisp) {
   Wisp.new(:thing($thing))
 }
