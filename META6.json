@@ -7,7 +7,7 @@
   ],
   "depends": [
   ],
-  "description": "blah blah blah",
+  "description": "Introspection helpers - grok( Something, :deeply ); say wisp( Endian )",
   "license": "Artistic-2.0",
   "name": "Grok",
   "perl": "6.d",
