@@ -1,2 +1,5 @@
 .precomp/
 ,*
+# Not yet ready:
+lib/Grok/Inspector.rakumod
+
