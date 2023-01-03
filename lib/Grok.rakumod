@@ -1,9 +1,109 @@
-use v6.d+;
+use v6.d;
 
+=begin pod
+
+![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
+
+
+=head1 NAME
+
+grok, wisp - introspection helpers.
+
+
+=head1 SYNOPSIS
+
+From the command line:
+
+=begin code :lang<bash>
+
+raku -MGrok -e 'grok( my $a = 42, :deeply :core)'
+
+raku -MGrok -e 'say wisp( Endian )'
+
+=end code
+
+
+Within Raku code:
+
+=begin code :lang<bash>
+
+use Grok :wisp;
+
+# print the Endian enumerations...
+say wisp( Endian );
+# Endian - Enum is: Int Cool Any Mu enums: NativeEndian LittleEndian BigEndian
+
+# print Allomorth attributes, methods and recurse into parents, roles including ::CORE types
+grok( Allomorph, :deeply, :core )
+# lots of output ...
+
+=end code
+
+
+=head1 DESCRIPTION
+
+Grok contains introspection helpers that display information about Raku things.
+
+For example: You want to know how many times a sub is wrapped - grok an example to see what methods are available.
+
+=begin code :lang<bash>
+
+>raku -MGrok -e 'sub s { say "s" }; &s.wrap({ say "w"; next }); grok( &s );'
+#s - () Sub+{Routine::Wrapped}
+#  Sub - Class is: Routine Block Code Any Mu does: Callable
+#  Routine - Class is: Block Code Any Mu does: Callable
+#  Block - Class is: Code Any Mu does: Callable
+#  Code - Class is: Any Mu does: Callable
+#  Any - Class is: Mu
+#  Mu - Class
+#  Routine::Wrapped - Role
+#  Callable - Role
+#  $!dispatcher - Mu private read-only in Routine
+#  $!do - Code private read-only in Code
+#  $!flags - int private read-only in Routine
+#  $!inline_info - Mu private read-only in Routine
+#  $!package - Mu private read-only in Routine
+#  $!phasers - Mu private read-only in Block
+#  $!signature - Signature private read-only in Code
+#  $!why - Mu private read-only in Block
+#  $!wrapper-type - Routine private read-only in Sub+{Routine::Wrapped}
+#  $!wrappers - Mu private read-only in Sub+{Routine::Wrapped}
+#  @!compstuff - List private read-only in Code
+#  @!dispatch_order - List private read-only in Routine
+#  @!dispatchees - List private read-only in Routine
+#  ADD-WRAPPER - (Sub+{Routine::Wrapped}: &wrapper, *%_ --> Nil) Method in Routine::Wrapped
+#  REMOVE-WRAPPER - (Sub+{Routine::Wrapped}: &wrapper, *%_ --> Bool) Method in Routine::Wrapped
+#  WRAPPER-TYPE - (Sub+{Routine::Wrapped}: *%_) Method in Routine::Wrapped
+#  WRAPPERS - (Sub+{Routine::Wrapped}: *%_) Method in Routine::Wrapped
+#  is-wrapped - (Sub+{Routine::Wrapped}: *%_ --> Bool) Method in Routine::Wrapped
+
+=end code
+
+
+=head1 NOTES
+
+This is my first Raku module - I used it's development to learn abour Raku introspection.
+
+Suggestions, improvements and bugfixes are very welcome.
+
+
+=head1 AUTHOR
+
+Jeff Armstrong <jeff@jaguart.tech>
+
+
+=head1 COPYRIGHT_AND_LICENSE
+
+Copyright 2022 Jeff Armstrong
+
+This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
+
+=end pod
+
+#-------------------------------------------------------------------------------
 unit module Grok;
 
 use Grok::Wisp;
-
 use Grok::Utils :is-core-class, :header-line;
 
 # recursion control
@@ -23,7 +123,7 @@ sub grok (
     :$local   = False,
     :$detail  = False,
     :$where   = Nil,
-  ) is export {
+  ) is export(:DEFAULT,:grok) {
 
   $DEPTH = 0;
   %SEEN = ();
@@ -47,7 +147,7 @@ sub grok (
 
 #-------------------------------------------------------------------------------
 #| internal - for recursion
-sub _grok (
+my sub _grok (
     Mu $thing is raw,
     :$deeply,
     :$core,
@@ -135,52 +235,9 @@ sub _grok (
 }
 
 #-------------------------------------------------------------------------------
-#| Describe a thing.
-sub wisp (
-    Mu $thing is raw,
-    :$detail  = False,
-    :$where   = Nil,
-  ) is export {
-
-  my $wisp = Wisp.new(:thing($thing));
-  my $notwhere =
-    do given $where {
-      when Bool:D { not $where }
-      default     { $wisp.mop.package }
-    };
-
-  say $wisp.gist( :$detail, :$notwhere );
-
+#| An introspection helper - provides .gist and .detail
+sub wisp ( Mu $thing is raw ) is export(:DEFAULT,:wisp) {
+  Wisp.new(:thing($thing))
 }
 
-=begin pod
-
-![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
-
-=head1 NAME
-
-Grok - blah blah blah
-
-=head1 SYNOPSIS
-
-=begin code :lang<raku>
-
-use Grok;
-
-=end code
-
-=head1 DESCRIPTION
-
-Grok is ...
-
-=head1 AUTHOR
-
-Jeff Armstrong <jeff@jamatic.tech>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright 2022 Jeff Armstrong
-
-This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
-
-=end pod
+#-------------------------------------------------------------------------------
