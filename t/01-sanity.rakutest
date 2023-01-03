@@ -1,0 +1,8 @@
+use Test;
+
+plan 4;
+
+use-ok 'Grok';
+use-ok 'Grok::Moppet';
+use-ok 'Grok::Wisp';
+use-ok 'Grok::Utils';

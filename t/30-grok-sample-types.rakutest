@@ -1,0 +1,40 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+for (
+  Any                                    ,
+  Bool                                   ,
+  DateTime                               ,
+  Endian                                 ,
+  Junction                               ,
+  Raku                                   ,
+  Signature                              ,
+  Stringy                                ,
+  UInt                                   ,
+  Version                                ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+
+  # Generate reference output
+  $file.spurt( output-from({grok($thing)}).&purified )
+    unless $file.e;
+
+  # Test reference output
+  is  output-from( { grok($thing) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;
+

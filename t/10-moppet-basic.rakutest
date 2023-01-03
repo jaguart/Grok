@@ -1,0 +1,20 @@
+use v6;
+
+use Test;
+
+use Grok::Moppet;
+
+my $a = 4;
+
+my $mop = Moppet.new( :thing($a) );
+
+for (<
+    var-name
+    var-value
+  >) -> $m {
+
+    say $m, ' ', $mop."$m"();
+
+}
+
+done-testing;

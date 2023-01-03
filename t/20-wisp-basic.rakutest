@@ -1,0 +1,75 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+use Grok :wisp;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+use Foo;
+
+for (
+  'Attribute'   => {
+      'wisp'    => 'Attribute - Class is: Any Mu',
+      'methods' => [
+          'Str - (Mu: |) proto Method in Mu',
+          'WHY - (Attribute: *%_) Method in Attribute',
+          'apply_handles - (Attribute: Mu $pkg, *%_) Method in Attribute',
+          'compose - (Attribute: Mu $package, :$compiler_services, *%_) Method in Attribute',
+          'container - (Attribute: *%_) Method in Attribute',
+          'dimensions - (Attribute: *%_) Method in Attribute',
+          'get_value - (Attribute: Mu $obj, *%_) Method in Attribute',
+          'gist - (Mu: |) proto Method in Mu',
+          'inlined - (Attribute: *%_) Method in Attribute',
+          'package - (Attribute: *%_) Method in Attribute',
+          'readonly - (Attribute: *%_) Method in Attribute',
+          'set_value - (Attribute: Mu $obj, Mu \value, *%_) Method in Attribute',
+          'set_why - (Attribute: $why, *%_) Method in Attribute',
+      ],
+    },
+  'Foo::Innie'  => {
+      'wisp' => 'Foo::Innie - Class is: Foo::Button Any Mu does: Foo::Notable Foo::Clickable Foo::EvenMore # No-one really loves an innie.',
+      'methods' => [
+          'BUILDALL - (Foo::Button:D: ;; @auto, %init, *%_) Submethod+{is-hidden-from-backtrace}+{} in Foo::Innie',
+          'belly - (Foo::Button:D: *%_) Method in Foo::Innie',
+          'click-him - (::T : |) proto Method in Dummy',
+          'click-me - (Foo::Innie: *%_) Method in Foo::Clickable',
+          'descr - (Foo::Innie: *%_) Method in Foo::Innie # descr returns a Str describing this instance of Innie',
+          'even-more - (::T : |) proto Method in Dummy',
+          'mage - (Foo::Button:D: *%_) Method in Foo::Innie',
+          'mymeta - (Mu: $obj, *%_) meta Method in Foo::Innie',
+          'notes - (::T : |) proto Method in Dummy',
+          'privee - (Foo::Innie: *%_) private Method in Foo::Innie',
+          'sadly - (Mu:D \fles: *%_) Method in Attribute',
+      ],
+    },
+
+) -> $test {
+
+  my $item  = $test.key;
+  my $descr = $test.value<wisp>;
+  my @meths = $test.value<methods>.List;
+
+  my $wisp = wisp($item.EVAL);
+  is $wisp.gist, $$descr, $item ~ ' gist';
+
+  #try {
+  #  my %methods = $wisp.mop.methods;
+  #  for %methods.pairs -> $m {
+  #    my $value := $m.value but Identified($m.key);
+  #    #say "key: '", $m.key, "'";
+  #    say '  method: ', Wisp.new( :thing($value<>) );
+  #  }
+  #}
+
+  for $wisp.mop.methods -> $method {
+    my $expected = @meths.elems ?? @meths.shift !! '';
+    is wisp($method).gist, $expected, 'method ' ~ $expected.split(/\s+/)[0];
+  }
+
+
+}
+
+
+done-testing;
