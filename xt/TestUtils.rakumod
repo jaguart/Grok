@@ -10,7 +10,8 @@ sub get-output-name( Mu $thing ) is export {
 
 #------------------------------------------------------------------------------
 # addresses change: "something |U123456789) another" --> "something |U*********) another"
-sub purified ( Str $output --> Str ) is export {
-  S:g/ \| (<alpha> ?) (\d +) \) /|$0$('*' x $1.chars))/
-    given $output
+sub purified ( Str $output is copy --> Str ) is export {
+  $output ~~ s:g/ \| (<alpha> ?) (\d +) \) /|$0$('*' x $1.chars))/;
+  $output ~~ s:g/\r\n/\n/;  # Windows;
+  $output;
 }
