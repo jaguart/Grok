@@ -1,9 +1,10 @@
 use v6.d;
 
+# mi6 has it's own opinion
+#![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
+# Much of the POD layout etc is due to how mi6 does POD.
+
 =begin pod
-
-![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
-
 
 =head1 NAME
 
@@ -44,7 +45,7 @@ grok( Allomorph, :deeply, :core )
 
 Grok contains introspection helpers that display information about Raku things.
 
-For example: You want to know how many times a sub is wrapped - grok an example to see what methods are available.
+For example: You want to know how many times a sub is wrapped - grok a golf to see what methods are available.
 
 =begin code :lang<bash>
 
@@ -79,24 +80,7 @@ For example: You want to know how many times a sub is wrapped - grok an example 
 
 =end code
 
-
-=head1 NOTES
-
-This is my first Raku module - I used it's development to learn abour Raku introspection.
-
-Suggestions, improvements and bugfixes are very welcome.
-
-
-=head1 AUTHOR
-
-Jeff Armstrong <jeff@jaguart.tech>
-
-
-=head1 COPYRIGHT_AND_LICENSE
-
-Copyright 2022 Jeff Armstrong
-
-This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
+... and you conclude it's worth checking out C<.WRAPPERS.elems>
 
 =end pod
 
@@ -111,11 +95,11 @@ our $DEPTH;
 our %SEEN;
 
 #-------------------------------------------------------------------------------
-#| Introspect a thing.
-#| :deeply -> recurse into parents, roles etc;
-#| :core -> include core classes.
-#| :local -> skip composed / imported methods
-#| :detail -> include extra detail
+#| Introspect a thing.&emsp;
+#|  **:deeply**  - recurse into parents, roles etc.&emsp;
+#|  **:core**    - include core classes.&emsp;
+#|  **:local**   - skip composed / imported methods.&emsp;
+#|  **:detail**  - include extra detail.&emsp;
 sub grok (
     Mu $thing is raw,
     :$deeply  = False,
@@ -146,7 +130,7 @@ sub grok (
 }
 
 #-------------------------------------------------------------------------------
-#| internal - for recursion
+# internal - for recursion
 my sub _grok (
     Mu $thing is raw,
     :$deeply,
@@ -236,8 +220,26 @@ my sub _grok (
 
 #-------------------------------------------------------------------------------
 #| An introspection helper - provides .gist and .detail
-sub wisp ( Mu $thing is raw ) is export(:DEFAULT,:wisp) {
+sub wisp ( Mu $thing is raw --> Wisp ) is export(:DEFAULT,:wisp) {
   Wisp.new(:thing($thing))
 }
 
 #-------------------------------------------------------------------------------
+=begin pod
+
+=head1 AUTHOR
+
+Jeff Armstrong <jeff@jaguart.tech>
+
+Source can be found at: https://github.com/jaguart/Grok
+
+This is my first Raku module - comments and Pull Requests are welcome.
+
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2022 Jeff Armstrong
+
+This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
+
+=end pod
