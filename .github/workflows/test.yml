@@ -29,7 +29,7 @@ jobs:
       - name: Install sigpipe
         run: zef install --/test --debug sigpipe
       - name: Install TAP
-        run: zef install --debug TAP
+        run: zef install --debug TAP --force-test
       - name: Install App::Prove6
         run: zef install --/test --debug App::Prove6
       - name: Install Test::Output
