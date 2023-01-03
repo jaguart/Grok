@@ -28,7 +28,9 @@ jobs:
         run: zef install --/test --test-depends --deps-only .
       - name: Install sigpipe
         run: zef install --/test --debug sigpipe
-      - name: Install TAP
+      - name: Install TAP clean
+        run: zef install --debug TAP --force-test --/prove --raku-test --/tap-harness
+      - name: Install TAP normal
         run: zef install --debug TAP --force-test
       - name: Install App::Prove6
         run: zef install --/test --debug App::Prove6
