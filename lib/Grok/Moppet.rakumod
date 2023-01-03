@@ -3,7 +3,7 @@ use v6.d;
 use Grok::Utils :cleanup-mop-name, :is-core-class, :cleanup-which-name;
 
 #------------------------------------------------------------------------------
-#| Easier interface to the MOP - which can be inconsistent / error prone.
+#| Easier interface to the MOP - which can be tricky when you drill down.
 #|  e.g. role.^methods doesn't return multi-methods etc.
 #|  Note that we always use the _table_ calls when we can, see
 #|  https://github.com/rakudo/rakudo/issues/4207#issuecomment-782836089
@@ -11,128 +11,123 @@ use Grok::Utils :cleanup-mop-name, :is-core-class, :cleanup-which-name;
 #|  class accessor name.
 unit class Grok::Moppet:auth<zef:jaguart> is export;
 
-  # Used to adorn methods with their external name and subtype - i.e. Multi Private
-  role Subtyped[$t]   {  has Str $.subtype = $t }
-  role Identified[$i] {  has Str $.ident = $i   }
+# Used to adorn methods with their external name and subtype - i.e. Multi Private
+role Subtyped[$t]   {  has Str $.subtype = $t }
+role Identified[$i] {  has Str $.ident = $i   }
 
-  #| The Mu being introspected
-  has $.thing;
+#| The Mu being introspected
+has $.thing;
 
-  #| The Mu's HOW
-  has $!how;
+#| The Mu's HOW
+has $!how;
 
-  #| Attribute sorting: required, accessible, private, DEPRECATED
-  my &sort-attributes = {
-        $^b.required.Bool     cmp $^a.required.Bool     or
-        $^a.?DEPRECATED.Bool  cmp $^b.?DEPRECATED.Bool  or
-        $^b.has_accessor.Bool cmp $^a.has_accessor.Bool or
-        $^a.name cmp $^b.name
-    };
+# Jeff 03-Jan-2023 not sure why but different:
+#   my &name = {} <- works
+#   sub &name  {} <- not so well, $a^name problems?
+#| Attribute sorting: required, accessible, private, DEPRECATED
+my &sort-attributes = {
+  $^b.required.Bool     cmp $^a.required.Bool     or
+  $^a.?DEPRECATED.Bool  cmp $^b.?DEPRECATED.Bool  or
+  $^b.has_accessor.Bool cmp $^a.has_accessor.Bool or
+  $^a.name cmp $^b.name
+};
 
-  #| Attribute sorting: just name, e.g. for grok: Metamodel::SubsetHOW
-  my &sort-attribute-names = {
-        $^a.name cmp $^b.name
-    };
+#| Attribute sorting: just name, e.g. for grok: Metamodel::SubsetHOW
+my &sort-attribute-names = {
+  $^a.name cmp $^b.name
+};
 
-  submethod TWEAK ( Mu :$thing is raw,  ) {
-    $!thing := $thing;
-    $!how    = $!thing.HOW;
+submethod TWEAK ( Mu :$thing is raw,  ) {
+  $!thing := $thing;
+  $!how    = $!thing.HOW;
+}
+
+#! EXTERNAL name - unknown to thing
+method ident ( --> Str ) {
+  return $!thing.ident if try $!thing.ident;
+  return '';
+}
+
+#| INTERNAL name, see also: .var-name for Scalar vars
+method name ( --> Str ) {
+  return $!thing.name  if try $!thing.name;
+  return $!thing.^name if self.not-core;
+  return '';
+}
+
+method is-method ( --> Bool:D ) {
+  $!thing ~~ Method
+}
+
+method is-proto-method ( --> Bool:D ) {
+  self.is-method and self.var-value.starts-with('proto')
+}
+
+#| Subtype e.g. for Methods: proto private Multi
+method subtype ( --> Str ) {
+  return 'proto' if self.is-proto-method;
+
+  # Jeff 31-Dec-2022 lower priority because subtype is simply assigned
+  return $!thing.subtype if try $!thing.subtype;
+
+  if $!thing ~~ Attribute and $!thing.WHICH ne Attribute.WHICH {
+    return $!thing.type.^name;
   }
 
-  #! EXTERNAL name - unknown to thing
-  method ident ( --> Str ) {
-    return $!thing.ident if try $!thing.ident;
-    return '';
-  }
+  return '';
+}
 
-  #| INTERNAL name, see also: .var-name for Scalar vars
-  method name ( --> Str ) {
-    return $!thing.name  if try $!thing.name;
-    return $!thing.^name if self.not-core;
-    return '';
-  }
+#| Tweaked type-name, e.g. Perl6::Metamodel::ClassHOW --> Class
+method type ( --> Str ) {
 
-  method is-method ( --> Bool:D ) {
-    $!thing ~~ Method
-  }
+  return cleanup-mop-name($!thing.^name) if try $!thing.^name;
 
-  #method is-submethod ( --> Bool:D ) {
-  #  $!thing ~~ Submethod
-  #}
+  return $!thing.WHAT.^name if self.is-core;
+  return 'Role' if self.is-role;
+  return cleanup-mop-name($!how.^name);
+}
 
-  #method is-routine ( --> Bool:D ) {
-  #  $!thing ~~ Routine
-  #}
-
-  method is-proto-method ( --> Bool:D ) {
-    self.is-method and self.var-value.starts-with('proto')
-  }
-
-  #| Subtype e.g. for Methods: proto private Multi
-  method subtype ( --> Str ) {
-    return 'proto' if self.is-proto-method;
-
-    # Jeff 31-Dec-2022 lower priority because subtype is simply assigned
-    return $!thing.subtype if try $!thing.subtype;
-
-    if $!thing ~~ Attribute and $!thing.WHICH ne Attribute.WHICH {
-      return $!thing.type.^name;
-    }
-
-    return '';
-  }
-
-  #| Tweaked type-name, e.g. Perl6::Metamodel::ClassHOW --> Class
-  method type ( --> Str ) {
-
-    return cleanup-mop-name($!thing.^name) if try $!thing.^name;
-
-    return $!thing.WHAT.^name if self.is-core;
-    return 'Role' if self.is-role;
-    return cleanup-mop-name($!how.^name);
-  }
-
-  #| parent type - usually Class, Role, Subtype etc.
-  method supertype ( --> Str ) {
-    return 'Role' if self.is-role;
-    return cleanup-mop-name($!how.^name);
-  }
+#| parent type - usually Class, Role, Subtype etc.
+method supertype ( --> Str ) {
+  return 'Role' if self.is-role;
+  return cleanup-mop-name($!how.^name);
+}
 
 
-  method var {
-    #say $!thing.WHICH, " vs ", $!thing.VAR.WHICH, ' d: ', $!thing.DEFINITE;
-    $!thing.DEFINITE ?? $!thing.VAR !! Nil;
-    #return $!thing.VAR.gist if $!thing.DEFINITE;
-    #return $!thing.VAR if $!thing.DEFINITE;
-    #return Nil;
-  }
+method var {
+  #say $!thing.WHICH, " vs ", $!thing.VAR.WHICH, ' d: ', $!thing.DEFINITE;
+  $!thing.DEFINITE ?? $!thing.VAR !! Nil;
+  #return $!thing.VAR.gist if $!thing.DEFINITE;
+  #return $!thing.VAR if $!thing.DEFINITE;
+  #return Nil;
+}
 
-  method var-type-name ( --> Str ) {
-    $!thing.DEFINITE ?? $!thing.VAR.^name !! '';
-    #$!thing.VAR.^name
-  }
+method var-type-name ( --> Str ) {
+  $!thing.DEFINITE ?? $!thing.VAR.^name !! '';
+  #$!thing.VAR.^name
+}
 
-  method var-of {
-    $!thing.DEFINITE ?? $!thing.VAR.?of !! Nil;
-  }
+method var-of {
+  $!thing.DEFINITE ?? $!thing.VAR.?of !! Nil;
+}
 
-  method var-name ( --> Str ) {
-    try return $!thing.VAR.name;
-    return '';
-  }
+method var-name ( --> Str ) {
+  try return $!thing.VAR.name;
+  return '';
+}
 
-  method var-value {
-    return '' unless try $!thing.VAR.raku; # Grammar ->  Role: NQPParametricRoleHOW
-    $!thing.DEFINITE ?? $!thing.VAR.raku !! '';
-  }
+method var-value {
+  return '' unless try $!thing.VAR.raku; # Grammar ->  Role: NQPParametricRoleHOW
+  $!thing.DEFINITE ?? $!thing.VAR.raku !! '';
+}
 
-  #| aka POD declarators
-  #| tip: export RAKUDO_POD_DECL_BLOCK_USER_FORMAT=1 to get your declarators looking pretty.
-  method why ( --> Str ) {
-    # Routine.WHY fails
-    try return $!thing.?WHY ?? $!thing.WHY.gist !! '';
-    return '';
-  }
+#| aka POD declarators
+#| tip: export RAKUDO_POD_DECL_BLOCK_USER_FORMAT=1 to get your declarators looking pretty.
+method why ( --> Str ) {
+  # Routine.WHY fails
+  try return $!thing.?WHY ?? $!thing.WHY.gist !! '';
+  return '';
+}
 
   #| aka OUR scoped things
   method knows {
@@ -195,12 +190,12 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
   # Attributes have a log of NQP - performance maybe?
   method attributes {
 
-    if try $!how.?attributes($!thing) {
-      # Not all Attributes have everything needed to sort
-      # i.e.: required, accessible, private, DEPRECATED
+    # Jeff 03-Jan-2023 this is fragile...
+   if try $!how.?attributes($!thing) {
       try return $!thing.^attributes.sort(&sort-attributes);
       return $!thing.^attributes.sort(&sort-attribute-names);
     }
+
     return Empty;
   }
 
@@ -387,7 +382,6 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     return not self.is-class;
   }
 
-
   method is-definite ( --> Bool ) {
     return $!thing.DEFINITE;
   }
@@ -396,10 +390,10 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     try $!thing.raku;
   }
 
+  #| Wisp.where shows this as `` 'in ' ~ package' ``
   method package ( :$prefix='' --> Str ) {
     return $prefix ~ $!thing.package.^name if try $!thing.package.^name;
     return $prefix ~ self.type if self.is-class or self.is-role;
-    #say 'not class: ', self.name;
     return '';
   }
 
@@ -407,7 +401,6 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     return $!thing.file.split(' ')[0] ~ ' ' ~ $!thing.line if try $!thing.file;
     return '';
   }
-
 
   method signature ( --> Str ) {
     try { $!thing.signature.gist } // '';
@@ -417,38 +410,33 @@ unit class Grok::Moppet:auth<zef:jaguart> is export;
     try { $!thing.message } // '';
   }
 
-
-method module-subs () {
-  # Jeff 31-Dec-2022 not found a way to make this work yet
-
-  $GLOBAL::Foo::barb = 100;
-  say 'barb: ', $GLOBAL::Foo::barb;
-
-  say self.name, ' exports:', self.exports;
-  say self.name, ' knows:', self.knows;
-
-  my $name    = self.name;
-
-
-  &GLOBAL::Foo::get-outers = -> { .say for 'OUTER::.pairs'.EVAL };
-  &GLOBAL::Foo::get-outers();
-
-  #say 'name: ', $Foo::bar;
-  #say $::('GLOBAL::Foo::bar');
-
-
-
-}
+#method module-subs () {
+#  # Jeff 31-Dec-2022 not found a way to make this work yet
+#
+#  $GLOBAL::Foo::barb = 100;
+#  say 'barb: ', $GLOBAL::Foo::barb;
+#
+#  say self.name, ' exports:', self.exports;
+#  say self.name, ' knows:', self.knows;
+#
+#  my $name    = self.name;
+#
+#
+#  &GLOBAL::Foo::get-outers = -> { .say for 'OUTER::.pairs'.EVAL };
+#  &GLOBAL::Foo::get-outers();
+#
+#  #say 'name: ', $Foo::bar;
+#  #say $::('GLOBAL::Foo::bar');
+#}
 
 
 method descr () {
-
+  # multi subs
   descr( $!thing );
-
 }
 
 # Jeff 01-Jan-2023 this is to type-check the multi return values
-proto sub descr ( Mu $thing --> Str ) { {*} }
+proto sub descr ( Mu $thing --> Str ) {*}
 
 multi sub descr ( Mu $thing ) {
 
@@ -481,58 +469,31 @@ multi sub descr ( Metamodel::ClassHOW:D $thing ) {
 }
 
 multi sub descr ( Attribute:D $thing ) {
+
   # Jeff 01-Jan-2023 note that .subtype returns the type constraint for an Attribute
 
-
-    (
-        ##$thing.type.^name,
-        $thing.?DEPRECATED  ?? 'DEPRECATED: [' ~ $thing.DEPRECATED ~ ']' !! '',
-        (
-           $thing.?required ~~ Str  ?? 'required: [' ~  $thing.?required ~ ']'
-        !! $thing.?required         ?? 'required'
-        !! ''
-        ),
-        $thing.has_accessor ?? 'public'       !! 'private',
-        $thing.?rw          ?? 'read-write'   !! 'read-only',
-     )
-     .grep( *.chars )
-     .join(' ')
-     ;
+  (
+      ##$thing.type.^name,
+      $thing.?DEPRECATED  ?? 'DEPRECATED: [' ~ $thing.DEPRECATED ~ ']' !! '',
+      (
+         $thing.?required ~~ Str  ?? 'required: [' ~  $thing.?required ~ ']'
+      !! $thing.?required         ?? 'required'
+      !! ''
+      ),
+      $thing.has_accessor ?? 'public'       !! 'private',
+      $thing.?rw          ?? 'read-write'   !! 'read-only',
+   )
+   .grep( *.chars )
+   .join(' ')
+   ;
 
 
 }
 
-# no further interesting detail for these - Wisp does the rest
-#multi sub descr ( Method:D $thing ) {  '' }
-#multi sub descr ( Submethod:D $thing ) {  '' }
-multi sub descr ( Routine:D $thing ) {  '' }
+# No interesting further detail - Wisp does the rest
+multi sub descr ( Routine:D $thing      ) {  '' }
 
-multi sub descr ( ForeignCode:D $thing ) {
-
-  #my $mop = Grok::Moppet.new( :thing($thing) );
-  #say '  # name:      ', $mop.name;
-  #say '  # signature: ', $mop.signature;
-  #say '  # subtype:   ', $mop.subtype;
-  #say '  # type:      ', $mop.type;
-  #say '  # supertype: ', $mop.supertype;
-  #say '  # package:   ', $mop.package;
-  #say '  # file:      ', $mop.file;
-  #say '  # methods:   ', $mop.methods(:all);
-  #say '  # var-name:  ', $mop.var-name;
-  #say '  # parents:   ', $mop.parents;
-  #say '  # roles:     ', $mop.roles;
-  #
-  #say '  # name:      ', $thing.name;
-  #say '  # arity:     ', $thing.arity;
-  #say '  # count:     ', $thing.count;
-  #say '  # of:        ', $thing.of;
-  #say '  # gist:      ', $thing.gist;
-  #say '  # raku:      ', $thing.raku;
-  #say '  # returns:   ', $thing.returns;
-
-
-  'Rakudo-specific';
-}
+multi sub descr ( ForeignCode:D $thing  ) { 'Rakudo-specific' }
 
 
 method enum-names {
@@ -547,3 +508,5 @@ method enum-names {
   return Empty;
 
 }
+
+# done
