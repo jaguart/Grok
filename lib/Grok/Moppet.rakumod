@@ -129,288 +129,289 @@ method why ( --> Str ) {
   return '';
 }
 
-  #| aka OUR scoped things
-  method knows {
-    if $!thing.WHO.?elems {
-      return $!thing.WHO.sort;
-    }
-    return Empty;
-   # say $layout.sprintf("ours"), $thing.WHO.keys.join(' ') if $thing.WHO.?elems;  # Stash names
+# TODO: Incorporate these into grok()
+#| aka OUR scoped things
+method knows {
+  if $!thing.WHO.?elems {
+    return $!thing.WHO.sort;
+  }
+  return Empty;
+ # say $layout.sprintf("ours"), $thing.WHO.keys.join(' ') if $thing.WHO.?elems;  # Stash names
+}
+
+# This was hard to get right... feels fragile
+method exports ( :$which = 'ALL' ) {
+  if try $!thing.WHO<EXPORT>.WHO<< $which >>.WHO.elems {
+    return $!thing.WHO<EXPORT>.WHO<< $which >>.WHO.sort;
+  }
+  return Empty;
+}
+
+#| Parents of this thing - Subset is not quite there yet.
+method parents () {
+
+  if try $!how.?parents($!thing, :all) {
+    return $!how.?parents($!thing, :all);
   }
 
-  # This was hard to get right... feels fragile
-  method exports ( :$which = 'ALL' ) {
-    if try $!thing.WHO<EXPORT>.WHO<< $which >>.WHO.elems {
-      return $!thing.WHO<EXPORT>.WHO<< $which >>.WHO.sort;
-    }
-    return Empty;
+  # Metamodel::SubsetHOW does not have :all
+  if try $!how.?parents($!thing ) {
+    return $!how.?parents($!thing );
   }
 
-  #| Parents of this thing - Subset is not quite there yet.
-  method parents () {
-
-    if try $!how.?parents($!thing, :all) {
-      return $!how.?parents($!thing, :all);
-    }
-
-    # Metamodel::SubsetHOW does not have :all
-    if try $!how.?parents($!thing ) {
-      return $!how.?parents($!thing );
-    }
-
-    # https://github.com/rakudo/rakudo/blob/main/src/Perl6/Metamodel/SubsetHOW.nqp
-    # This is the underlying / parent type for a Subset
-    if try $!thing.HOW.refinee($!thing) {
-      return $!thing.HOW.refinee($!thing);
-    }
-
-    return Empty;
+  # https://github.com/rakudo/rakudo/blob/main/src/Perl6/Metamodel/SubsetHOW.nqp
+  # This is the underlying / parent type for a Subset
+  if try $!thing.HOW.refinee($!thing) {
+    return $!thing.HOW.refinee($!thing);
   }
 
-  method parent-names   { self.parents.map( *.^name );  } # convenience
+  return Empty;
+}
 
-  method roles {
-    try {
-      # Normal things
-      if $!how.?roles($!thing) {
-        return $!thing.^roles(:transitive);
-      }
+method parent-names   { self.parents.map( *.^name );  } # convenience
+
+method roles {
+  try {
+    # Normal things
+    if $!how.?roles($!thing) {
+      return $!thing.^roles(:transitive);
     }
-    try {
-      # Metamodel::SubsetHOW requires :local
-      if $!how.?roles($!thing, :local) {
-        return $!thing.^roles;
-      }
+  }
+  try {
+    # Metamodel::SubsetHOW requires :local
+    if $!how.?roles($!thing, :local) {
+      return $!thing.^roles;
     }
-    return Empty;
+  }
+  return Empty;
+}
+
+method role-names     { self.roles.map( *.^name );    }
+
+# Attributes have a log of NQP - performance maybe?
+method attributes {
+
+  # Jeff 03-Jan-2023 this is fragile...
+ if try $!how.?attributes($!thing) {
+    try return $!thing.^attributes.sort(&sort-attributes);
+    return $!thing.^attributes.sort(&sort-attribute-names);
   }
 
-  method role-names     { self.roles.map( *.^name );    }
+  return Empty;
+}
 
-  # Attributes have a log of NQP - performance maybe?
-  method attributes {
+#| class x is rw -> are Attributes read-write by default?
+method is-rw of Bool {
+ my $rw = try $!thing.^rw.Bool;
+ return $rw ?? True !! False;
+}
 
-    # Jeff 03-Jan-2023 this is fragile...
-   if try $!how.?attributes($!thing) {
-      try return $!thing.^attributes.sort(&sort-attributes);
-      return $!thing.^attributes.sort(&sort-attribute-names);
+#| Note that Submethods are NOT Methods -but they ARE returned by .methods( :all )
+method submethods {
+  my @methods;
+  if $!how.?submethod_table($!thing) {
+    if my %methods = $!how.submethod_table($!thing) {
+      @methods.append: %methods.pairs.sort.map({
+           $_.value<> but Identified[$_.key]
+        })
     }
-
-    return Empty;
   }
+  # Must be a better pattern for returning an empty list.
+  # return |@a returns a NIL for empty @a
+  # Have to see if we really need to do anything...
+  ##return Empty unless @methods.elems;
+  ##return |@methods.Slip;
+  return @methods;
+}
 
-  #| class x is rw -> are Attributes read-write by default?
-  method is-rw of Bool {
-   my $rw = try $!thing.^rw.Bool;
-   return $rw ?? True !! False;
-  }
+#----------------------------------------------------------------------------
+#| :all -> include meta, multi, private and submethods.
+#| :local -> only those defined in the same package
+method methods ( :$all = True, :$local = False ) {
 
-  #| Note that Submethods are NOT Methods -but they ARE returned by .methods( :all )
-  method submethods {
-    my @methods;
-    if $!how.?submethod_table($!thing) {
-      if my %methods = $!how.submethod_table($!thing) {
-        @methods.append: %methods.pairs.sort.map({
-             $_.value<> but Identified[$_.key]
-          })
-      }
-    }
-    # Must be a better pattern for returning an empty list.
-    # return |@a returns a NIL for empty @a
-    # Have to see if we really need to do anything...
-    ##return Empty unless @methods.elems;
-    ##return |@methods.Slip;
-    return @methods;
-  }
+  # Jeff 01-Jan-2023 keep the debug statements in this method.
+  my $debug = False;
+  say "methods: :all $all :local $local" if $debug;
 
-  #----------------------------------------------------------------------------
-  #| :all -> include meta, multi, private and submethods.
-  #| :local -> only those defined in the same package
-  method methods ( :$all = True, :$local = False ) {
+  my @methods;
 
-    # Jeff 01-Jan-2023 keep the debug statements in this method.
-    my $debug = False;
-    say "methods: :all $all :local $local" if $debug;
-
-    my @methods;
-
-    if $!how.?method_table($!thing) {
-      # hash-assignment coerces NQP-hash-types into araku hash type
-      if my %methods = $!how.method_table($!thing) {
-        say "methods: using ^method_table" if $debug;
-        @methods.append:
-           %methods.pairs.sort.map({
-            try { $_.value<> but (Identified[$_.key], Subtyped[''] ) } // $_.value<>;
-           });
-      }
-    }
-    else {
-      say "methods: no method_table -> using ^methods" if $debug;
-      try
-      # Roles - e.g. Callable does not have method_table
-       @methods.append: $!thing.^methods.map({
-            $_ ~~ Pair
-              ??  $_.value<> but (Identified[$_.key], Subtyped[''] )
-              !! $_<> ;
-           });
-    }
-
-    # https://github.com/rakudo/rakudo/blob/main/src/Perl6/Metamodel/SubsetHOW.nqp
-    # This is the method that enforces the constraint in the Subset.
-
-    # Jeff 01-Jan-2023 try .^refinement is not reliable
-    # Weird issue in testing where grok(Any);grok(UInt) shows no methods for UInt (a Subset)
-    # but grok(UInt);grok(Any) works as expected.
-    # Switching to a Subset smartmatch on .HOW seems to work better.
-    {
-      say "methods: have .^refinement " if $debug;
-      @methods.append( $!thing.^refinement ) ;
-    } if $!thing.HOW ~~ Metamodel::SubsetHOW;
-
-    if $all {
-
+  if $!how.?method_table($!thing) {
+    # hash-assignment coerces NQP-hash-types into araku hash type
+    if my %methods = $!how.method_table($!thing) {
+      say "methods: using ^method_table" if $debug;
       @methods.append:
-        |self.methods-meta,
-        |self.methods-multi,
-        |self.methods-private,
-        |self.submethods,
-        ;
-
+         %methods.pairs.sort.map({
+          try { $_.value<> but (Identified[$_.key], Subtyped[''] ) } // $_.value<>;
+         });
     }
+  }
+  else {
+    say "methods: no method_table -> using ^methods" if $debug;
+    try
+    # Roles - e.g. Callable does not have method_table
+     @methods.append: $!thing.^methods.map({
+          $_ ~~ Pair
+            ??  $_.value<> but (Identified[$_.key], Subtyped[''] )
+            !! $_<> ;
+         });
+  }
 
-    say "methods: total: ", @methods.elems if $debug;
+  # https://github.com/rakudo/rakudo/blob/main/src/Perl6/Metamodel/SubsetHOW.nqp
+  # This is the method that enforces the constraint in the Subset.
 
-    if $local {
-      my $package = self.type if self.is-class || self.is-role;
-      if $package {
-        @methods = @methods.grep({ not ($_.?package.^name ne $package) });
-      }
+  # Jeff 01-Jan-2023 try .^refinement is not reliable
+  # Weird issue in testing where grok(Any);grok(UInt) shows no methods for UInt (a Subset)
+  # but grok(UInt);grok(Any) works as expected.
+  # Switching to a Subset smartmatch on .HOW seems to work better.
+  {
+    say "methods: have .^refinement " if $debug;
+    @methods.append( $!thing.^refinement ) ;
+  } if $!thing.HOW ~~ Metamodel::SubsetHOW;
+
+  if $all {
+
+    @methods.append:
+      |self.methods-meta,
+      |self.methods-multi,
+      |self.methods-private,
+      |self.submethods,
+      ;
+
+  }
+
+  say "methods: total: ", @methods.elems if $debug;
+
+  if $local {
+    my $package = self.type if self.is-class || self.is-role;
+    if $package {
+      @methods = @methods.grep({ not ($_.?package.^name ne $package) });
     }
-
-    say "methods: after local prune: ", @methods.elems if $debug;
-
-    # ForeignCode <anon> blocks are difficult to get anything from
-    @methods = @methods.grep({
-        not ( $_.?name.so and $_.name eq '<anon>' )
-      });
-    say "methods: after <anon> prune: ", @methods.elems if $debug;
-
-    @methods = @methods.sort({
-        # Jeff 01-Jan-2023 Grammar NQP methods have issues
-        ($^a.?ident // $^a.?name // '' )  cmp  ($^b.?ident // $^b.?name // '')   or
-        ($^a.?signature.gist //'' ) cmp  ($^b.?signature.gist //'' )
-      });
-
-    ## Jeff 31-Dec-2022 always an iterable, never a Nil
-    #return Empty unless @methods.elems;
-    #return |@methods.Slip;
-    return @methods;
-
   }
 
-  method methods-meta {
-    my @methods;
-    if $!how.?meta_method_table($!thing) {
-      if my %methods = $!how.meta_method_table($!thing) {
-        @methods.append: %methods.pairs.sort.map({
-             $_.value<> but (Identified[$_.key], Subtyped['meta'] )
-          });
-      }
+  say "methods: after local prune: ", @methods.elems if $debug;
+
+  # ForeignCode <anon> blocks are difficult to get anything from
+  @methods = @methods.grep({
+      not ( $_.?name.so and $_.name eq '<anon>' )
+    });
+  say "methods: after <anon> prune: ", @methods.elems if $debug;
+
+  @methods = @methods.sort({
+      # Jeff 01-Jan-2023 Grammar NQP methods have issues
+      ($^a.?ident // $^a.?name // '' )  cmp  ($^b.?ident // $^b.?name // '')   or
+      ($^a.?signature.gist //'' ) cmp  ($^b.?signature.gist //'' )
+    });
+
+  ## Jeff 31-Dec-2022 always an iterable, never a Nil
+  #return Empty unless @methods.elems;
+  #return |@methods.Slip;
+  return @methods;
+
+}
+
+method methods-meta {
+  my @methods;
+  if $!how.?meta_method_table($!thing) {
+    if my %methods = $!how.meta_method_table($!thing) {
+      @methods.append: %methods.pairs.sort.map({
+           $_.value<> but (Identified[$_.key], Subtyped['meta'] )
+        });
     }
-    #return @methods.Slip if @methods.elems;
-    #return Empty;
-    return @methods;
-
   }
+  #return @methods.Slip if @methods.elems;
+  #return Empty;
+  return @methods;
 
-  #| Specifically for Roles,
-  #| as .^methods does NOT include multi-methods.
-  #| Rakudo specific - ParametricRoleGroup.candidates
-  method methods-multi {
-    my @methods;
+}
 
-    if $!how ~~ Metamodel::ParametricRoleGroupHOW {
-      my @multis;
-      for $!how.candidates($!thing) -> $role {
-        push @multis, | $role.^multi_methods_to_incorporate;
-      }
-      @methods.append: @multis.map({ $_.name => $_.code }).sort.map({
-         $_.value<> but (Identified[$_.key], Subtyped['multi'] )
-      });
+#| Specifically for Roles,
+#| as .^methods does NOT include multi-methods.
+#| Rakudo specific - ParametricRoleGroup.candidates
+method methods-multi {
+  my @methods;
+
+  if $!how ~~ Metamodel::ParametricRoleGroupHOW {
+    my @multis;
+    for $!how.candidates($!thing) -> $role {
+      push @multis, | $role.^multi_methods_to_incorporate;
     }
-
-    #return Empty unless @methods.elems;
-    #return |@methods.Slip;
-    return @methods;
+    @methods.append: @multis.map({ $_.name => $_.code }).sort.map({
+       $_.value<> but (Identified[$_.key], Subtyped['multi'] )
+    });
   }
 
-  method methods-private {
-    my @methods;
-    if $!how.?private_method_table($!thing) {
-      if my %methods = $!how.private_method_table($!thing) {
-        @methods.append: %methods.pairs.sort.map({
-             $_.value<> but (Identified[$_.key], Subtyped['private'] )
-          });
-      }
+  #return Empty unless @methods.elems;
+  #return |@methods.Slip;
+  return @methods;
+}
+
+method methods-private {
+  my @methods;
+  if $!how.?private_method_table($!thing) {
+    if my %methods = $!how.private_method_table($!thing) {
+      @methods.append: %methods.pairs.sort.map({
+           $_.value<> but (Identified[$_.key], Subtyped['private'] )
+        });
     }
-    #return Empty unless @methods.elems;
-    #return |@methods.Slip;
-    return @methods;
   }
+  #return Empty unless @methods.elems;
+  #return |@methods.Slip;
+  return @methods;
+}
 
-  method which ( --> Str ) {
-    return cleanup-which-name($!thing);
-  }
+method which ( --> Str ) {
+  return cleanup-which-name($!thing);
+}
 
-  method is-role ( --> Bool ) {
-    return $!how.^name.contains('Role');
-  }
+method is-role ( --> Bool ) {
+  return $!how.^name.contains('Role');
+}
 
-  method is-core ( --> Bool ) {
-    # Jeff 31-Dec-2022 just the base type, ignoring any mixin
-    is-core-class( self.type )
-  }
-  method not-core ( --> Bool ) {
-    return not self.is-core;
-  }
+method is-core ( --> Bool ) {
+  # Jeff 31-Dec-2022 just the base type, ignoring any mixin
+  is-core-class( self.type )
+}
+method not-core ( --> Bool ) {
+  return not self.is-core;
+}
 
-  method is-class ( --> Bool ) {
-    return $!thing.HOW ~~ Metamodel::ClassHOW;
-  }
+method is-class ( --> Bool ) {
+  return $!thing.HOW ~~ Metamodel::ClassHOW;
+}
 
-  method not-class ( --> Bool ) {
-    return not self.is-class;
-  }
+method not-class ( --> Bool ) {
+  return not self.is-class;
+}
 
-  method is-definite ( --> Bool ) {
-    return $!thing.DEFINITE;
-  }
+method is-definite ( --> Bool ) {
+  return $!thing.DEFINITE;
+}
 
-  method raku ( --> Str ) {
-    try $!thing.raku;
-  }
+method raku ( --> Str ) {
+  try $!thing.raku;
+}
 
-  #| Wisp.where shows this as `` 'in ' ~ package' ``
-  method package ( :$prefix='' --> Str ) {
-    return $prefix ~ $!thing.package.^name if try $!thing.package.^name;
-    return $prefix ~ self.type if self.is-class or self.is-role;
-    return '';
-  }
+#| Wisp.where shows this as `` 'in ' ~ package' ``
+method package ( :$prefix='' --> Str ) {
+  return $prefix ~ $!thing.package.^name if try $!thing.package.^name;
+  return $prefix ~ self.type if self.is-class or self.is-role;
+  return '';
+}
 
-  method file ( :$prefix='' --> Str ) {
-    return $!thing.file.split(' ')[0] ~ ' ' ~ $!thing.line if try $!thing.file;
-    return '';
-  }
+method file ( :$prefix='' --> Str ) {
+  return $!thing.file.split(' ')[0] ~ ' ' ~ $!thing.line if try $!thing.file;
+  return '';
+}
 
-  method signature ( --> Str ) {
-    try { $!thing.signature.gist } // '';
-  }
+method signature ( --> Str ) {
+  try { $!thing.signature.gist } // '';
+}
 
-  method message ( --> Str ) {
-    try { $!thing.message } // '';
-  }
+method message ( --> Str ) {
+  try { $!thing.message } // '';
+}
 
-#method module-subs () {
+# TODO: hard to probe subs in a module - they are 'my' scopedod module-subs () {
 #  # Jeff 31-Dec-2022 not found a way to make this work yet
 #
 #  $GLOBAL::Foo::barb = 100;
@@ -430,14 +431,15 @@ method why ( --> Str ) {
 #}
 
 
+|# description - a method that dispatches to multi-subs
 method descr () {
-  # multi subs
-  descr( $!thing );
+  descr( $!thing ) # multi subs
 }
 
-# Jeff 01-Jan-2023 this is to type-check the multi return values
+# Jeff 01-Jan-2023 type-check multi sub return values
 proto sub descr ( Mu $thing --> Str ) {*}
 
+# We end up here if there is no specialisation, so keep the debug
 multi sub descr ( Mu $thing ) {
 
   #my $mop = Grok::Moppet.new( :thing($thing) );
@@ -464,42 +466,42 @@ multi sub descr ( Mu $thing ) {
 
 }
 
+# I think this is ignored in Wisp
 multi sub descr ( Metamodel::ClassHOW:D $thing ) {
   'class-descr'
 }
 
+# Attributes have interesting parts.
+# It's a shame there is no standard way of getting traits
 multi sub descr ( Attribute:D $thing ) {
 
   # Jeff 01-Jan-2023 note that .subtype returns the type constraint for an Attribute
-
   (
-      ##$thing.type.^name,
-      $thing.?DEPRECATED  ?? 'DEPRECATED: [' ~ $thing.DEPRECATED ~ ']' !! '',
-      (
-         $thing.?required ~~ Str  ?? 'required: [' ~  $thing.?required ~ ']'
-      !! $thing.?required         ?? 'required'
-      !! ''
-      ),
-      $thing.has_accessor ?? 'public'       !! 'private',
-      $thing.?rw          ?? 'read-write'   !! 'read-only',
-   )
-   .grep( *.chars )
-   .join(' ')
-   ;
-
+    ##$thing.type.^name,
+    $thing.?DEPRECATED  ?? 'DEPRECATED: [' ~ $thing.DEPRECATED ~ ']' !! '',
+    (
+       $thing.?required ~~ Str  ?? 'required: [' ~  $thing.?required ~ ']'
+    !! $thing.?required         ?? 'required'
+    !! ''
+    ),
+    $thing.has_accessor ?? 'public'       !! 'private',
+    $thing.?rw          ?? 'read-write'   !! 'read-only',
+  )
+  .grep( *.chars )
+  .join(' ')
+  ;
 
 }
 
 # No interesting further detail - Wisp does the rest
 multi sub descr ( Routine:D $thing      ) {  '' }
-
 multi sub descr ( ForeignCode:D $thing  ) { 'Rakudo-specific' }
 
 
 method enum-names {
 
   # Jeff 01-Jan-2023 the Enumeration class itself fails,
-  # but non DEFINITE classes like Endian do have enums.
+  # but non-DEFINITE classes like Endian do have enums.
   if $!thing ~~ Enumeration  {
     return $!thing.enums.sort({$^a.value <=> $^b.value}).map( *.key )
       if try $!thing.enums;
