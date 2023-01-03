@@ -83,7 +83,7 @@ For example: You want to know how many times a sub is wrapped - grok a golf to s
 
 =end code
 
-... and you conclude it's worth checking out C<.WRAPPERS.elems>
+... and you conclude it's worth checking out C<.WRAPPERS.elems>.
 
 =end pod
 
@@ -98,11 +98,12 @@ our $DEPTH;
 our %SEEN;
 
 #-------------------------------------------------------------------------------
-#| Introspect a thing.&emsp;
-#|  **:deeply**  - recurse into parents, roles etc.&emsp;
-#|  **:core**    - include core classes.&emsp;
-#|  **:local**   - skip composed / imported methods.&emsp;
-#|  **:detail**  - include extra detail.&emsp;
+#| Introspect a thing. `` grok( Allomorph, :deeply, :core ); ``
+#| - **:deeply**  - recurse into parents, roles etc.
+#| - **:core**    - include core classes.
+#| - **:local**   - skip composed / imported methods.
+#| - **:detail**  - include extra detail.
+#| - **:where**   - True - show in-package, False - hide in-package, Default - show imported package names.
 sub grok (
     Mu $thing is raw,
     :$deeply  = False,
@@ -222,7 +223,10 @@ my sub _grok (
 }
 
 #-------------------------------------------------------------------------------
-#| An introspection helper - provides **.gist** and **.detail**
+#| An introspection helper - e.g. `` say wisp( Endian ) ``
+#| Provides:
+#| - **.gist**
+#| - **.detail**
 sub wisp ( Mu $thing is raw --> Wisp ) is export(:DEFAULT,:wisp) {
   Wisp.new(:thing($thing))
 }

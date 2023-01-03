@@ -1,5 +1,7 @@
 [![Actions Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)](https://github.com/jaguart/Grok/actions)
 
+![Version](https://raku.land/zef:jaguart/Grok/badges/version)
+
 NAME
 ====
 
@@ -68,7 +70,7 @@ For example: You want to know how many times a sub is wrapped - grok a golf to s
 #  is-wrapped - (Sub+{Routine::Wrapped}: *%_ --> Bool) Method in Routine::Wrapped
 ```
 
-... and you conclude it's worth checking out `.WRAPPERS.elems`
+... and you conclude it's worth checking out `.WRAPPERS.elems`.
 
 ### sub grok
 
@@ -83,7 +85,12 @@ sub grok(
 ) returns Mu
 ```
 
-Introspect a thing.&emsp; **:deeply** - recurse into parents, roles etc.&emsp; **:core** - include core classes.&emsp; **:local** - skip composed / imported methods.&emsp; **:detail** - include extra detail.&emsp;
+Introspect a thing. `` grok( Allomorph, :deeply, :core ); ``
+- **:deeply**  - recurse into parents, roles etc.
+- **:core**    - include core classes.
+- **:local**   - skip composed / imported methods.
+- **:detail**  - include extra detail.
+- **:where**   - True - show in-package, False - hide in-package, Default - show imported package names.
 
 ### sub wisp
 
@@ -93,7 +100,10 @@ sub wisp(
 ) returns Wisp
 ```
 
-An introspection helper - provides .gist and .detail
+An introspection helper - e.g. `` say wisp( Endian ) ``
+Provides:
+- **.gist**
+- **.detail**
 
 AUTHOR
 ======
