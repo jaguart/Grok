@@ -543,7 +543,7 @@ method enum-names {
   # Jeff 01-Jan-2023 the Enumeration class itself fails,
   # but non DEFINITE classes like Endian do have enums.
   if $!thing ~~ Enumeration  {
-    return $!thing.enums.map( *.key )
+    return $!thing.enums.sort({$^a.value <=> $^b.value}).map( *.key )
       if try $!thing.enums;
   }
 
