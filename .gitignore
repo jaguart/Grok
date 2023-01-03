@@ -1,5 +1,8 @@
+# Raku compilation artifacts
 .precomp/
+# mi6 build artifacts
+Grok-*
+# Dev artifacts
 ,*
-# Not yet ready:
+# Not yet ready for GIT
 lib/Grok/Inspector.rakumod
-
