@@ -3,6 +3,8 @@ use v6.d;
 use Test;
 use Test::Output;
 
+plan 10;
+
 use lib $?FILE.IO.parent;
 use TestUtils;
 
@@ -37,4 +39,3 @@ for (
 say 'done';
 
 done-testing;
-

@@ -3,11 +3,14 @@ use v6.d;
 use Test;
 use Test::Output;
 
+plan 26;
+
 use Grok :wisp;
 
 use lib $?FILE.IO.parent;
 use TestUtils;
 use Foo;
+
 
 for (
   'Attribute'   => {

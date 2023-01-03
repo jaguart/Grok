@@ -2,7 +2,12 @@ use v6;
 
 use Test;
 
+plan 0;
+
+
 use Grok::Moppet;
+
+# TODO: Make some Moppet tests...
 
 my $a = 4;
 
