@@ -3,6 +3,8 @@ use v6.d;
 use Test;
 use Test::Output;
 
+plan 70;
+
 use lib $?FILE.IO.parent;
 use TestUtils;
 
