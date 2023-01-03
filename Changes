@@ -2,5 +2,8 @@ Revision history for Grok
 
 {{$NEXT}}
 
+0.0.3  2023-01-03T18:38:52+11:00
+    - Minor cleanups and documentation, test fixes
+
 0.0.2  2023-01-03T15:23:07+11:00
     - Initial version
