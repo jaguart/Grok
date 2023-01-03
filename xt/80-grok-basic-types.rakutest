@@ -1,0 +1,100 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+for (
+  AST                                    ,
+  Allomorph                              ,
+  Any                                    ,
+  Block                                  ,
+  Bool                                   ,
+  CallFrame                              ,
+  Callable                               ,
+  Code                                   ,
+  Collation                              ,
+  Compiler                               ,
+  Complex                                ,
+  ComplexStr                             ,
+  Cool                                   ,
+  CurrentThreadScheduler                 ,
+  Date                                   ,
+  DateTime                               ,
+  Dateish                                ,
+  Distribution                           ,
+  Distribution::Hash                     ,
+  Distribution::Locally                  ,
+  Distribution::Path                     ,
+  Distribution::Resource                 ,
+  Duration                               ,
+  Encoding                               ,
+  Encoding::Registry                     ,
+  Endian                                 ,
+  FatRat                                 ,
+  ForeignCode                            ,
+  HyperSeq                               ,
+  HyperWhatever                          ,
+  Instant                                ,
+  Int                                    ,
+  IntStr                                 ,
+  Junction                               ,
+  Label                                  ,
+  Lock::Async                            ,
+  Macro                                  ,
+  Method                                 ,
+  Mu                                     ,
+  Nil                                    ,
+  Num                                    ,
+  NumStr                                 ,
+  Numeric                                ,
+  ObjAt                                  ,
+  Parameter                              ,
+  Perl                                   ,
+  PredictiveIterator                     ,
+  Proxy                                  ,
+  RaceSeq                                ,
+  Raku                                   ,
+  Rat                                    ,
+  RatStr                                 ,
+  Rational                               ,
+  Real                                   ,
+  Routine                                ,
+  Scalar                                 ,
+  Signature                              ,
+  Str                                    ,
+  StrDistance                            ,
+  Stringy                                ,
+  Sub                                    ,
+  Submethod                              ,
+  UInt                                   ,
+  ValueObjAt                             ,
+  Variable                               ,
+  Version                                ,
+  Whatever                               ,
+  WhateverCode                           ,
+  atomicint                              ,
+  int                                    ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+
+  # Generate reference output
+  $file.spurt( output-from({grok($thing)}).&purified )
+    unless $file.e;
+
+  # Test reference output
+  is  output-from( { grok($thing) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;
+

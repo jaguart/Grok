@@ -1,0 +1,65 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+for (
+  Array                                ,
+  Associative                          ,
+  Bag                                  ,
+  BagHash                              ,
+  Baggy                                ,
+  Blob                                 ,
+  Buf                                  ,
+  Capture                              ,
+  Enumeration                          ,
+  Hash                                 ,
+  Iterable                             ,
+  Iterator                             ,
+  List                                 ,
+  Map                                  ,
+  Mix                                  ,
+  MixHash                              ,
+  Mixy                                 ,
+  NFC                                  ,
+  NFD                                  ,
+  NFKC                                 ,
+  NFKD                                 ,
+  Pair                                 ,
+  Positional                           ,
+  PositionalBindFailover               ,
+  PseudoStash                          ,
+  QuantHash                            ,
+  Range                                ,
+  Seq                                  ,
+  Sequence                             ,
+  Set                                  ,
+  SetHash                              ,
+  Setty                                ,
+  Slip                                 ,
+  Stash                                ,
+  Uni                                  ,
+  utf8                                 ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+
+  # Generate reference output
+  $file.spurt( output-from({grok($thing)}).&purified )
+    unless $file.e;
+
+  # Test reference output
+  is  output-from( { grok($thing) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;

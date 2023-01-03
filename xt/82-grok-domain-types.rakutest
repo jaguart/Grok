@@ -1,0 +1,107 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+for (
+  Attribute                                             ,
+  Cancellation                                          ,
+  Channel                                               ,
+  CompUnit                                              ,
+  CompUnit::PrecompilationRepository                    ,
+  CompUnit::Repository                                  ,
+  CompUnit::Repository::FileSystem                      ,
+  CompUnit::Repository::Installation                    ,
+  Distro                                                ,
+  Grammar                                               ,
+  IO                                                    ,
+  IO::ArgFiles                                          ,
+  IO::CatHandle                                         ,
+  IO::Handle                                            ,
+  IO::Notification                                      ,
+  IO::Notification::Change                              ,
+  IO::Path                                              ,
+  IO::Path::Cygwin                                      ,
+  IO::Path::Parts                                       ,
+  IO::Path::QNX                                         ,
+  IO::Path::Unix                                        ,
+  IO::Path::Win32                                       ,
+  IO::Pipe                                              ,
+  IO::Socket                                            ,
+  IO::Socket::Async                                     ,
+  IO::Socket::Async::ListenSocket                       ,
+  IO::Socket::INET                                      ,
+  IO::Spec                                              ,
+  IO::Spec::Cygwin                                      ,
+  IO::Spec::QNX                                         ,
+  IO::Spec::Unix                                        ,
+  IO::Spec::Win32                                       ,
+  IO::Special                                           ,
+  Kernel                                                ,
+  Lock                                                  ,
+  Lock::ConditionVariable                               ,
+  #Match                                                 ,
+  Order                                                 ,
+  Pod::Block                                            ,
+  Pod::Block::Code                                      ,
+  Pod::Block::Comment                                   ,
+  Pod::Block::Declarator                                ,
+  Pod::Block::Named                                     ,
+  Pod::Block::Para                                      ,
+  Pod::Block::Table                                     ,
+  Pod::Defn                                             ,
+  Pod::FormattingCode                                   ,
+  Pod::Heading                                          ,
+  Pod::Item                                             ,
+  Proc                                                  ,
+  Proc::Async                                           ,
+  Promise                                               ,
+  Regex                                                 ,
+  Scheduler                                             ,
+  Semaphore                                             ,
+  Supplier                                              ,
+  Supplier::Preserving                                  ,
+  Supply                                                ,
+  Systemic                                              ,
+  Tap                                                   ,
+  Thread                                                ,
+  ThreadPoolScheduler                                   ,
+  VM                                                    ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+
+  # Generate reference output
+  $file.spurt( output-from({grok($thing)}).&purified )
+    unless $file.e;
+
+  # Test reference output
+  is  output-from( { grok($thing) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;
+
+=begin pod
+
+TODO:
+
+  Routine::WrapHandle                    ,
+  Telemetry                              ,
+  Telemetry::Instrument::Thread          ,
+  Telemetry::Instrument::ThreadPool      ,
+  Telemetry::Instrument::Usage           ,
+  Telemetry::Period                      ,
+  Telemetry::Sampler                     ,
+
+
+=end pod

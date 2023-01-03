@@ -1,0 +1,32 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+for (
+  ForeignCode                            ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+  #say $file; next;
+
+  # Generate reference output
+  $file.spurt( output-from({grok($thing)}).&purified )
+    unless $file.e;
+
+  # Test reference output
+  is  output-from( { grok($thing) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;
+
