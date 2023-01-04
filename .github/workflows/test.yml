@@ -33,6 +33,7 @@ jobs:
           git clone https://github.com/Raku/tap-harness6.git
           cd tap-harness6/
           raku -e 'CompUnit::RepositoryRegistry.repository-for-name(Q[site]).install(Distribution::Path.new($*CWD))'
+          echo 'Done'
       - name: Install TAP clean
         run: zef install --debug TAP --force-test --/prove --raku-test --/tap-harness
       - name: Install TAP normal
