@@ -29,9 +29,10 @@ jobs:
       - name: Install sigpipe
         run: zef install --/test --debug sigpipe
       - name: Install TAP using Raku
-        run: git clone https://github.com/Raku/tap-harness6.git
-        run: cd tap-harness6/
-        run: raku -e 'CompUnit::RepositoryRegistry.repository-for-name("site").install(Distribution::Path.new($*CWD))'
+        run: |
+          git clone https://github.com/Raku/tap-harness6.git
+          cd tap-harness6/
+          raku -e 'CompUnit::RepositoryRegistry.repository-for-name("site").install(Distribution::Path.new($*CWD))'
       - name: Install TAP clean
         run: zef install --debug TAP --force-test --/prove --raku-test --/tap-harness
       - name: Install TAP normal
