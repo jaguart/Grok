@@ -242,12 +242,14 @@ Jeff Armstrong <jeff@jaguart.tech>
 
 Source can be found at: https://github.com/jaguart/Grok
 
-This is my first Raku module - comments and Pull Requests are welcome.
+This is my first Raku module - comments and Pull Requests are appreciated.
 
 
-=head1 COPYRIGHT AND LICENSE
+=head1 COPYRIGHT
 
 Copyright 2022 Jeff Armstrong
+
+=head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
 
