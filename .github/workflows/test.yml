@@ -26,20 +26,9 @@ jobs:
           raku-version: ${{ matrix.raku-version }}
       - name: Install Dependencies
         run: zef install --/test --test-depends --deps-only .
-      - name: Install sigpipe
-        run: zef install --/test --debug sigpipe
-      - name: Install TAP using Raku
-        run: |
-          git clone https://github.com/Raku/tap-harness6.git
-          cd tap-harness6/
-          raku --ll-exception -e 'CompUnit::RepositoryRegistry.repository-for-name(Q[site]).install(Distribution::Path.new($*CWD))'
-      - name: Install TAP clean
-        run: zef install --debug TAP --force-test --/prove --raku-test --/tap-harness
-      - name: Install TAP normal
-        run: zef install --debug TAP --force-test
       - name: Install App::Prove6
-        run: zef install --/test --debug App::Prove6
-      - name: Install Test::Output
-        run: zef install --/test Test::Output
+        run: |
+          zef install --/test --debug App::Prove6
+          zef install --/test Test::Output
       - name: Run Tests
         run: prove6 -I. t
