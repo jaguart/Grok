@@ -1,6 +1,4 @@
-[![Actions Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)](https://github.com/jaguart/Grok/actions)
-
-![Version](https://raku.land/zef:jaguart/Grok/badges/version)
+[![Version](https://raku.land/zef:jaguart/Grok/badges/version)](https://raku.land/zef:jaguart) [![Actions Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)](https://github.com/jaguart/Grok/actions)
 
 NAME
 ====
@@ -102,8 +100,8 @@ sub wisp(
 
 An introspection helper - e.g. `` say wisp( Endian ) ``
 Provides:
-- **.gist**
-- **.detail**
+- **.gist**    - string containing: whom, what, where, why
+- **.detail** - string containing: whom, what, where, origin, why
 
 AUTHOR
 ======
