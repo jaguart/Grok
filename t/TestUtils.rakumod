@@ -4,7 +4,8 @@ unit module TestUtils;
 
 #------------------------------------------------------------------------------
 sub get-output-name( Mu $thing ) is export {
-  my $name = S/\.rakutest// given "./t/check-{$*PROGRAM-NAME.IO.basename}-{$thing.^name}.txt";
+  my $ident = $thing ~~ Str:D ?? $thing !! $thing.^name;
+  my $name = S/\.rakutest// given "{$*PROGRAM-NAME.IO.dirname}/check-{$*PROGRAM-NAME.IO.basename}-{$ident}.txt";
   S:g/ \: + /-/  given  $name;
 }
 
