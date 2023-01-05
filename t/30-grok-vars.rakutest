@@ -12,7 +12,7 @@ use Grok;
 
 # Jeff 05-Jan-2023 scoped like this because a for-loop as
 # in the other test modules eats the '$a' var
-{
+subtest {
 
     my $a = 42;
     my $file = get-output-name('IntA').IO;
@@ -26,9 +26,9 @@ use Grok;
         $file.IO.slurp,
         $_<>.^name;
 
-}
+}, 'IntA';
 
-{
+subtest {
     my $b = "Apples";
     my $file = get-output-name('StrB').IO;
 
@@ -41,9 +41,9 @@ use Grok;
         $file.IO.slurp,
         $_<>.^name;
 
-}
+}, 'StrB';
 
-{
+subtest {
     my &b = -> { 'b' };
     my $file = get-output-name('BlockB').IO;
 
@@ -56,9 +56,9 @@ use Grok;
         $file.IO.slurp,
         $_<>.^name;
 
-}
+}, 'BlockB';
 
-{
+subtest {
     sub s ( Str $s --> Str ) { $s.say }
 
     my $file = get-output-name('SubS').IO;
@@ -72,7 +72,7 @@ use Grok;
         $file.IO.slurp,
         $_<>.^name;
 
-}
+}, 'SubS';
 
 
 say 'done';
