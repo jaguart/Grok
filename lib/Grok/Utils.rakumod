@@ -48,14 +48,14 @@ sub cleanup-which-name ( Mu $o --> Str ) is export(:cleanup-which-name) {
 #| Pad left and right, but only for content, otherwise empty string.
 #| :l(' ') - left padding
 #| :r(' ') - right padding
-sub pad-lr ( Str $what, :$l=' ', :$r=' ' ) is export(:pad-lr) {
+sub pad-lr ( Str $what, :$l=' ', :$r=' ' --> Str ) is export(:pad-lr) {
     $what.so ?? $l ~ $what ~ $r !! ''
 }
 
 #| Header line with embedded description, fixed width
 #| $description
 #| :w(80) - width
-sub header-line ( Str $descr = '', :$w=80 ) is export(:header-line) {
+sub header-line ( Str $descr = '', :$w=80 --> Str ) is export(:header-line) {
     ('--' ~ pad-lr($descr) ~ '-' x 78).substr(0,$w)
 }
 
