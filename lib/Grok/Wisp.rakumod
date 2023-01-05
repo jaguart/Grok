@@ -136,11 +136,13 @@ method gist ( :$format="%s", :$detail = False, :$notwhere = False, --> Str ) {
 
 }
 
-method ident  { $!ident   } #= identity - external
-method whom   { $!whom    } #= who I am - name
-method what   { $!what    } #= what I am - subtype, type, supertype
-method where  { $!where   } #= where I am - namespace
-method whence { $!whence  } #= whence I came from - file/line
-method wax    { $!wax     } #= additional wax - extended detail
-method why    { $!why     } #= Pod declarator content. RAKUDO_POD_DECL_BLOCK_USER_FORMAT=1
+method ident  ( --> Str ) { $!ident   } #= identity - external
+method whom   ( --> Str ) { $!whom    } #= who I am - name
+method what   ( --> Str ) { $!what    } #= what I am - subtype, type, supertype
+method where  ( --> Str ) { $!where   } #= where I am - namespace
+method whence ( --> Str ) { $!whence  } #= whence I came from - file/line
+method wax    ( --> Str ) { $!wax     } #= additional wax - extended detail
+method why    ( --> Str ) { $!why     } #= Pod declarator content. RAKUDO_POD_DECL_BLOCK_USER_FORMAT=1
 
+
+# TODO: rejig this detail
