@@ -78,10 +78,9 @@ method subtype ( --> Str ) {
 }
 
 #| Tweaked type-name, e.g. Perl6::Metamodel::ClassHOW --> Class
+#| Class name || What name || Role || HOW name
 method type ( --> Str ) {
-
   return cleanup-mop-name($!thing.^name) if try $!thing.^name;
-
   return $!thing.WHAT.^name if self.is-core;
   return 'Role' if self.is-role;
   return cleanup-mop-name($!how.^name);
@@ -498,17 +497,21 @@ multi sub descr ( Routine:D $thing      ) {  '' }
 multi sub descr ( ForeignCode:D $thing  ) { 'Rakudo-specific' }
 
 
-method enum-names {
+method enums {
 
   # Jeff 01-Jan-2023 the Enumeration class itself fails,
   # but non-DEFINITE classes like Endian do have enums.
   if $!thing ~~ Enumeration  {
-    return $!thing.enums.sort({$^a.value <=> $^b.value}).map( *.key )
+    return $!thing.enums.sort({$^a.value <=> $^b.value})
       if try $!thing.enums;
   }
 
   return Empty;
 
+}
+
+method enum-names {
+    return self.enums.map(*.key)
 }
 
 # done
