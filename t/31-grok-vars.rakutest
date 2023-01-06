@@ -1,0 +1,80 @@
+use v6.d;
+
+use Test;
+use Test::Output;
+
+plan 4;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+# Jeff 05-Jan-2023 scoped like this because a for-loop as
+# in the other test modules eats the '$a' var
+subtest {
+
+    my $a = 42;
+    my $file = get-output-name('IntA').IO;
+
+    # Generate reference output
+    $file.spurt( output-from({grok($a)}).&purified )
+        unless $file.e;
+
+    # Test reference output
+    is  output-from( { grok($a) } ).&purified,
+        $file.IO.slurp,
+        $_<>.^name;
+
+}, 'IntA';
+
+subtest {
+    my $b = "Apples";
+    my $file = get-output-name('StrB').IO;
+
+    # Generate reference output
+    $file.spurt( output-from({grok($b)}).&purified )
+        unless $file.e;
+
+    # Test reference output
+    is  output-from( { grok($b) } ).&purified,
+        $file.IO.slurp,
+        $_<>.^name;
+
+}, 'StrB';
+
+subtest {
+    my &b = -> { 'b' };
+    my $file = get-output-name('BlockB').IO;
+
+    # Generate reference output
+    $file.spurt( output-from({grok(&b)}).&purified )
+        unless $file.e;
+
+    # Test reference output
+    is  output-from( { grok(&b) } ).&purified,
+        $file.IO.slurp,
+        $_<>.^name;
+
+}, 'BlockB';
+
+subtest {
+    sub s ( Str $s --> Str ) { $s.say }
+
+    my $file = get-output-name('SubS').IO;
+
+    # Generate reference output
+    $file.spurt( output-from({grok(&s)}).&purified )
+        unless $file.e;
+
+    # Test reference output
+    is  output-from( { grok(&s) } ).&purified,
+        $file.IO.slurp,
+        $_<>.^name;
+
+}, 'SubS';
+
+
+say 'done';
+
+done-testing;
