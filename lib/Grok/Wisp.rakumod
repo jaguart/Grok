@@ -8,7 +8,7 @@ use Grok::Moppet;
 #| .detail from .ident .whom .what .where .whence .wax .why
 #| .mop is accessible - possible anti-pattern - deprecate or delegate?
 #------------------------------------------------------------------------------
-unit class Wisp is export;
+unit class Grok::Wisp is export;
 
 has Mu              $.thing is built(:bind);
 has Grok::Moppet    $.mop;
@@ -134,6 +134,10 @@ method gist ( :$format="%s", :$detail = False, :$notwhere = False, --> Str ) {
     .grep( *.chars )
     .join(' ');
 
+}
+
+method detail ( |args ) {
+    self.gist( |args, :detail );
 }
 
 method ident  ( --> Str ) { $!ident   } #= identity - external
