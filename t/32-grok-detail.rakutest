@@ -1,0 +1,44 @@
+use v6.d;
+#-------------------------------------------------------------------------------
+# Test grok( :detail ) option
+#-------------------------------------------------------------------------------
+
+use Test;
+use Test::Output;
+
+plan 10;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok;
+
+for (
+  Attribute                                             ,
+  Cancellation                                          ,
+  Channel                                               ,
+  Promise                                               ,
+  Regex                                                 ,
+  Scheduler                                             ,
+  Semaphore                                             ,
+  Supplier                                              ,
+  Supply                                                ,
+  Systemic                                              ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+
+  # Generate reference output
+  $file.spurt( output-from({grok($thing,:detail)}).&purified )
+    unless $file.e;
+
+  # Test reference output
+  is  output-from( { grok($thing,:detail) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;

@@ -1,0 +1,94 @@
+use v6.d;
+#-------------------------------------------------------------------------------
+# Test Wisp.detail method - which is an alias for Wisp.gist($thing, :detail)
+#-------------------------------------------------------------------------------
+
+use Test;
+use Test::Output;
+
+plan 10;
+
+use lib $?FILE.IO.parent;
+use TestUtils;
+
+use Grok::Wisp;
+
+our %SEEN = ();
+
+for (
+  Enumeration                          ,
+  Hash                                 ,
+  Iterable                             ,
+  Iterator                             ,
+  List                                 ,
+  Map                                  ,
+  Mix                                  ,
+  MixHash                              ,
+  Mixy                                 ,
+  NFC                                  ,
+) -> $thing {
+
+  my $file = get-output-name($thing).IO;
+
+  # Generate reference output
+  %SEEN = ();
+  $file.spurt( output-from({ _detail($thing) }).&purified )
+    unless $file.e;
+
+  # Test reference output
+  %SEEN = ();
+  is  output-from( { _detail( $thing) } ).&purified,
+      $file.IO.slurp,
+      $thing.^name;
+
+}
+
+say 'done';
+
+done-testing;
+
+#-------------------------------------------------------------------------------
+# internal - for recursion
+my sub _detail (
+    Mu $thing is raw,
+    |args
+  ) {
+
+  return if %SEEN{$thing.WHICH}++;
+
+  my $prefix = '  ';
+
+  my $wisp = Wisp.new(:thing($thing));
+
+  say $wisp.detail( :notwhere($wisp.mop.package)  );
+
+  for $wisp.mop.parents( :all, :local ) -> $parent {
+    say $prefix, Wisp.new(:thing($parent)).detail;
+  }
+
+  for $wisp.mop.roles( :all, :local ) -> $role {
+    say $prefix, Wisp.new(:thing($role)).detail;
+  }
+
+  for $wisp.mop.attributes( :local, ) -> $attribute {
+    say $prefix, Wisp.new(:thing($attribute)).detail;
+  }
+
+  for $wisp.mop.methods( :local ) -> $method {
+    say $prefix, Wisp.new(:thing($method)).detail;
+  }
+
+  say '';
+
+  {
+    for $wisp.mop.parents( :all, :local ) -> $parent {
+      _detail( $parent );
+    }
+    for $wisp.mop.roles( :all, :local ) -> $role {
+      _detail( $role );
+    }
+  }
+
+  return;
+
+}
