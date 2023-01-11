@@ -470,6 +470,30 @@ multi sub descr ( Metamodel::ClassHOW:D $thing ) {
   'class-descr'
 }
 
+multi sub descr ( Pod::Block::Named:D $thing ) {
+  '' ~ $thing.contents.elems ~ ' elements ' ~ $thing.config.join(' ');
+}
+
+multi sub descr ( Pod::FormattingCode:D $thing ) {
+  'type: ' ~ $thing.type
+}
+
+multi sub descr ( Pod::Heading:D $thing ) {
+  'level ' ~ $thing.level;
+}
+
+multi sub descr ( Pod::Block::Para:D $thing ) {
+  $thing.contents.join(' ');
+}
+
+multi sub descr ( Pod::Block::Declarator:D $thing ) {
+  $thing.WHEREFORE.gist;
+}
+
+multi sub descr ( Pod::Block::Code:D $thing ) {
+  $thing.config<lang>;
+}
+
 # Attributes have interesting parts.
 # It's a shame there is no standard way of getting traits
 multi sub descr ( Attribute:D $thing ) {
