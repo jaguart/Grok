@@ -8,9 +8,10 @@ unit module Grok::Utils;
 #  return False;
 #}
 
-sub is-core-class ( Mu $o --> Bool ) is export(:is-core-class) {
+sub is-core-class ( Mu $o is raw --> Bool ) is export(:is-core-class) {
 
     my $cwn = cleanup-which-name($o);
+    #say $cwn, ' ', $o.WHICH, $o.WHICH.gist, $o.WHAT, $o.WHERE, $o.raku.substr(0,80);
 
     # Jeff 01-Jan-2023 Grammar has a .WHICH.Str of Str|NQPMatchRole
 
