@@ -88,6 +88,7 @@ For example: You want to know how many times a sub is wrapped - grok a golf to s
 ... and you conclude it's worth checking out C<.WRAPPERS.elems>.
 
 =end pod
+#' - UE syntax highlight
 
 #-------------------------------------------------------------------------------
 unit module Grok;
@@ -106,6 +107,7 @@ our %SEEN;
 #| - **:local**   - skip composed / imported methods.
 #| - **:detail**  - include extra detail.
 #| - **:where**   - True - show in-package, False - hide in-package, Default - show imported package names.
+#| - **:hide**    - hide this string, used by Scry to remove POD generation artifacts.
 sub grok (
     Mu $thing is raw,
     :$deeply  = False,
@@ -113,7 +115,9 @@ sub grok (
     :$local   = False,
     :$detail  = False,
     :$where   = Nil,
+    :$hide    = Nil,
   ) is export(:DEFAULT,:grok) {
+
 
   $DEPTH = 0;
   %SEEN = ();
@@ -131,7 +135,7 @@ sub grok (
   #    .join(' ') || 'defaults',
   #    ;
 
-  _grok( $thing, :$deeply, :$core, :$local, :$detail, :$where );
+  _grok( $thing, :$deeply, :$core, :$local, :$detail, :$where, :$hide );
 
 }
 
@@ -145,9 +149,11 @@ my sub _grok (
     :$detail,
     :$where,
     :$context = '',
+    :$hide = '',
   ) {
 
-  return if %SEEN{$thing.WHICH}++;
+  my $which = $thing.?WHICH;
+  return if $which and %SEEN{$which}++;
 
   # The count is just in case we directly grokked a core
   return if !$core && is-core-class($thing) && %SEEN.elems > 1 ;
@@ -155,7 +161,7 @@ my sub _grok (
   #say header-line( $context );
   my $prefix = '  ';
 
-  my $wisp = Wisp.new(:thing($thing));
+  my $wisp = Wisp.new(:thing($thing),:$hide);
 
   say $wisp.gist( :$detail, :notwhere($wisp.mop.package)  );
 
@@ -175,19 +181,27 @@ my sub _grok (
     };
 
   for $wisp.mop.parents( :all, :$local ) -> $parent {
-    say $prefix, Wisp.new(:thing($parent)).gist( :$detail );
+    say $prefix, Wisp.new(:thing($parent),:$hide).gist( :$detail );
   }
 
   for $wisp.mop.roles( :all, :$local ) -> $role {
-    say $prefix, Wisp.new(:thing($role)).gist( :$detail );
+    say $prefix, Wisp.new(:thing($role),:$hide).gist( :$detail );
+  }
+
+  for $wisp.mop.exports() -> $p {
+    say $prefix, Wisp.new(:thing($p.value),:$hide).gist( :$detail );
+  }
+
+  for $wisp.mop.knows() -> $p {
+    say $prefix, Wisp.new(:thing($p.value),:$hide).gist( :$detail );
   }
 
   for $wisp.mop.attributes( :$local, ) -> $attribute {
-    say $prefix, Wisp.new(:thing($attribute)).gist( :$detail, :$notwhere );
+    say $prefix, Wisp.new(:thing($attribute),:$hide).gist( :$detail, :$notwhere );
   }
 
   for $wisp.mop.methods( :$local ) -> $method {
-    say $prefix, Wisp.new(:thing($method)).gist( :$detail, :$notwhere );
+    say $prefix, Wisp.new(:thing($method),:$hide).gist( :$detail, :$notwhere );
   }
 
   say '';
@@ -195,6 +209,20 @@ my sub _grok (
   if $deeply {
 
     $DEPTH++;
+
+      for $wisp.mop.exports() -> $pair {
+        _grok(
+            $pair.value
+            :$deeply,
+            :$core,
+            :$local,
+            :$detail,
+            :$where,
+            :context( $wisp.whom ~ ' export ' ~ $DEPTH )
+            :$hide,
+            );
+      }
+
     for $wisp.mop.parents( :all, :$local ) -> $parent {
       _grok(
           $parent,
@@ -204,6 +232,7 @@ my sub _grok (
           :$detail,
           :$where,
           :context( $wisp.whom ~ ' parent ' ~ $DEPTH )
+          :$hide,
         );
     }
     for $wisp.mop.roles( :all, :$local ) -> $role {
@@ -215,6 +244,7 @@ my sub _grok (
           :$detail,
           :$where,
           :context( $wisp.whom ~ ' role ' ~ $DEPTH )
+          :$hide,
         );
     }
     $DEPTH--;
@@ -229,8 +259,8 @@ my sub _grok (
 #| Provides:
 #| - **.gist**    - string containing: whom, what, where, why
 #| - **.detail** - string containing: whom, what, where, origin, why
-sub wisp ( Mu $thing is raw --> Wisp ) is export(:DEFAULT,:wisp) {
-  Wisp.new(:thing($thing))
+sub wisp ( Mu $thing is raw, |args  --> Wisp ) is export(:DEFAULT,:wisp) {
+  Wisp.new(:thing($thing), |args)
 }
 
 #-------------------------------------------------------------------------------
