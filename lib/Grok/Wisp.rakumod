@@ -12,6 +12,9 @@ unit class Grok::Wisp is export;
 
 has Mu              $.thing is built(:bind);
 has Grok::Moppet    $.mop;
+has Str             $.hide;
+
+has Bool            $.notwhom   = False;   #= trunctate the .gist?
 
 has Str             $!ident   = '';   #= External identity
 has Str             $!whom    = '';   #= Who I think I am
@@ -94,12 +97,26 @@ submethod TWEAK {
     # POD or Exception Message - with NL subst
     $!why = S:g/\n/\c[SYMBOL FOR NEWLINE]/ given ( $!mop.why || $!mop.message );
 
+    # Jeff 07-Jan-2023 this is used to hide scry artifacts
+    if $!hide {
+        $!ident.=subst($!hide,'',:g);
+        $!whom.=subst($!hide,'',:g);;
+        $!what.=subst($!hide,'',:g);;
+        $!where.=subst($!hide,'',:g);;
+        $!whence.=subst($!hide,'',:g);;
+        $!wax.=subst($!hide,'',:g);;
+        $!why.=subst($!hide,'',:g);;
+    }
+
+
 }
+
+#------------------------------------------------------------------------------
 
 # $notware can be:
 #   False -> no $where is displayed,
 #   Str   -> $!where is not displayed if it is the same as the Str value
-method gist ( :$format="%s", :$detail = False, :$notwhere = False, --> Str ) {
+method gist ( :$format="%s", :$detail = False, :$notwhere = False, :$notwhom = $!notwhom, --> Str ) {
 
     #say 'ident:  ', $!ident;
     #say 'whom:   ', $!whom;
@@ -120,11 +137,11 @@ method gist ( :$format="%s", :$detail = False, :$notwhere = False, --> Str ) {
         }
     }
 
-    my $divider = '-';
+    my @whom = ( $format.sprintf($!whom), '-', );
+       @whom = () if $notwhom;
 
     (
-      $format.sprintf($!whom),
-      $divider,
+      @whom.Slip,
       $!what,
       $where,
       ( $detail     ?? $!whence   !! '' ),
