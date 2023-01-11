@@ -17,9 +17,7 @@ _grok( sub x ( --> Str ) { 'x'}, :deeply  );
 
 sub _grok ( Mu $thing is raw, :$deeply ) {
 
-
-
-    my $iota = $thing ~~ Grok::Iota ?? $thing !! Grok::Iota.new( $thing );
+    my $iota = $thing ~~ Grok::Iota:D ?? $thing !! Grok::Iota.new( $thing );
 
     return if %SEEN{$iota.which}++;
 
