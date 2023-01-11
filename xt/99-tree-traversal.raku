@@ -63,29 +63,80 @@ class node {
 
     }
 
+    method dump ( $prefix is copy = '', $lastkid = False ) {
+
+        # Have to determine the prefix for the next round of kids in parent,
+        # because that's where we know if there are more kids
+
+        # Various unicode box-draw chars - keep for reference
+        #   │
+        #   ├─
+        #   └─
+        #   ╰
+
+        say $prefix, $!id, $!left ?? '←' !! '→';
+
+        $prefix.=subst(/\─$/, ' ');         # remove this nodes leader
+        $prefix.=subst(/\└\s/, '  ', :g);   # prior last-kid continuation
+        $prefix.=subst(/\├\s/, '│ ',:g);    # prior inter-kid continuation
+
+        .dump($prefix ~ ($_.id == @!kids.tail.id ?? '└─' !! '├─') ) for @!kids;
+    }
+
+
 
 }
 
-my $a = node.new(:id(1));
+#         --1--
+#        /     \
+#       2       3
+#      / \     / \
+#     4   5   6   7
+#    /       / \
+#   8       9   10
 
-$a.get(1).kids.push( node.new(:id(2),:left), node.new(:id(3)) );
+#   1
+#   |-2
+#   | |-4
+#   | | └-8
+#   | └-5
+#   └-3
+#     |-6
+#     | |-9
+#     | └-10
+#     └-7
+#
+#
 
-$a.get(2).kids.push( node.new(:id(4),:left), node.new(:id(5)) );
-$a.get(3).kids.push( node.new(:id(6),:left), node.new(:id(7)) );
+my $id = 1;
+my $a = node.new(:id($id++));
 
-$a.get(4).kids.push( node.new(:id(8),:left) );
-$a.get(6).kids.push( node.new(:id(9), :left), node.new(:id(10))  );
+$a.get(1).kids.push( node.new(:id($id++),:left), node.new(:id($id++)) );
 
+$a.get(2).kids.push( node.new(:id($id++),:left), node.new(:id($id++)) );
+$a.get(3).kids.push( node.new(:id($id++),:left), node.new(:id($id++)) );
 
-say "dfs-inorder    : ", $a.dfs-inorder.join(' ');
-say "expect         : 8 4 2 5 1 9 6 10 3 7\n";
+$a.get(4).kids.push( node.new(:id($id++),:left) );
+$a.get(6).kids.push( node.new(:id($id++), :left), node.new(:id($id++))  );
+
+$a.get(9).kids.push( node.new(:id($id++), :left), node.new(:id($id++))  );
+
+$a.get(10).kids.push( node.new(:id($id++), :left), node.new(:id($id++)), node.new(:id($id++))  );
+
+$a.get(8).kids.push( node.new(:id($id++), :left), node.new(:id($id++))  );
+
 
 say "dfs-preorder   : ", $a.dfs-preorder.join(' ');
 say "expect         : 1 2 4 8 5 3 6 9 10 7\n";
+
+say "dfs-inorder    : ", $a.dfs-inorder.join(' ');
+say "expect         : 8 4 2 5 1 9 6 10 3 7\n";
 
 say "dfs-postorder  : ", $a.dfs-postorder.join(' ');
 say "expect         : 8 4 5 2 9 10 6 7 3 1\n";
 
 say "bfs-level      : ", $a.bfs-level.join(' ');
-say "expect        : 1 2 3 4 5 6 7 8 9 10\n";
+say "expect         : 1 2 3 4 5 6 7 8 9 10\n";
+
+$a.dump;
 
