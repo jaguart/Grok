@@ -4,5 +4,6 @@
 Grok-*
 # Dev artifacts
 ,*
+.idea/*
 # Not yet ready for GIT
 lib/Grok/Inspector.rakumod
