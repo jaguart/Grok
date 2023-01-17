@@ -516,6 +516,11 @@ multi sub descr ( Attribute:D $thing ) {
 
 }
 
+multi sub descr ( IO::Path:D $thing  ) { $thing.Str }
+multi sub descr ( Str:D $thing  ) { $thing.chars ?? $thing.Str !! $thing.raku }
+multi sub descr ( CompUnit:D $thing  ) { $thing.short-name }
+multi sub descr ( CompUnit::Repository::Distribution:D $x ) { $x.Str }
+
 # No interesting further detail - Wisp does the rest
 multi sub descr ( Routine:D $thing      ) {  '' }
 multi sub descr ( ForeignCode:D $thing  ) { 'Rakudo-specific' }
