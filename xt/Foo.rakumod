@@ -11,7 +11,7 @@ say $name;
 
 
 #| I am Foo!
-module Foo:auth<zef:jaguart>:ver<0.0.2> {
+module Foo:ver<0.0.2>:api<1.2>:auth<zef:jaguart> {
 
   our Str constant θ = " " x 4; # Just a tab
 
@@ -110,12 +110,12 @@ module Foo:auth<zef:jaguart>:ver<0.0.2> {
 
 }
 
-class Bar {
+class Bar:auth<zef:jaguart>:ver<0.0.3> {
   has Int $.um = 3;
   has Str $.sh = 'sh';
 }
 
-class Bob::Apple {
+class Bob::Apple:auth<zef:jaguart>:ver<0.0.4> {
   has Int $.water = 3;
   has Str $.colour = 'red';
   multi method dunk () { ... }
