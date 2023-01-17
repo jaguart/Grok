@@ -13,6 +13,8 @@
   "perl": "6.d",
   "provides": {
     "Grok": "lib/Grok.rakumod",
+    "Grok::DOM": "lib/Grok/DOM.rakumod",
+    "Grok::Iota": "lib/Grok/Iota.rakumod",
     "Grok::Moppet": "lib/Grok/Moppet.rakumod",
     "Grok::Utils": "lib/Grok/Utils.rakumod",
     "Grok::Wisp": "lib/Grok/Wisp.rakumod"
