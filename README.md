@@ -79,7 +79,8 @@ sub grok(
     :$core = Bool::False,
     :$local = Bool::False,
     :$detail = Bool::False,
-    :$where = Nil
+    :$where = Nil,
+    :$hide = Nil
 ) returns Mu
 ```
 
@@ -89,13 +90,15 @@ Introspect a thing. `` grok( Allomorph, :deeply, :core ); ``
 - **:local**   - skip composed / imported methods.
 - **:detail**  - include extra detail.
 - **:where**   - True - show in-package, False - hide in-package, Default - show imported package names.
+- **:hide**    - hide this string, used by Scry to remove POD generation artifacts.
 
 ### sub wisp
 
 ```raku
 sub wisp(
-    Mu $thing is raw
-) returns Wisp
+    Mu $thing is raw,
+    |args
+) returns Grok::Wisp
 ```
 
 An introspection helper - e.g. `` say wisp( Endian ) ``
@@ -110,12 +113,15 @@ Jeff Armstrong <jeff@jaguart.tech>
 
 Source can be found at: https://github.com/jaguart/Grok
 
-This is my first Raku module - comments and Pull Requests are welcome.
+This is my first Raku module - comments and Pull Requests are appreciated.
 
-COPYRIGHT AND LICENSE
-=====================
+COPYRIGHT
+=========
 
 Copyright 2022 Jeff Armstrong
+
+LICENSE
+=======
 
 This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
 
