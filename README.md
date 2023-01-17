@@ -98,7 +98,7 @@ Introspect a thing. `` grok( Allomorph, :deeply, :core ); ``
 sub wisp(
     Mu $thing is raw,
     |args
-) returns Grok::Wisp
+) returns Kaolin::Wisp
 ```
 
 An introspection helper - e.g. `` say wisp( Endian ) ``
