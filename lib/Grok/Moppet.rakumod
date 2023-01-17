@@ -1,6 +1,8 @@
-use v6.d;
+use v6;
 
 use Grok::Utils :cleanup-mop-name, :is-core-class, :cleanup-which-name;
+
+die { 'moved to Kaolin::Moppet' };
 
 #------------------------------------------------------------------------------
 #| Easier interface to the MOP - which can be tricky when you drill down.

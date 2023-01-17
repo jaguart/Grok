@@ -1,6 +1,8 @@
-use v6d+;
+use v6;
 
 use Grok::Moppet;
+
+die { 'moved to Kaolin::Wisp' };
 
 #------------------------------------------------------------------------------
 #| A prettier .gist from MOP for almost anything.

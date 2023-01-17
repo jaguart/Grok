@@ -9,7 +9,7 @@ use v6;
 # to handle the load.
 use lib <.>;
 
-use Grok::DOM;
+use Grok::DOM::Factory;
 
 my $file = @*ARGS[0] if @*ARGS.elems;
 

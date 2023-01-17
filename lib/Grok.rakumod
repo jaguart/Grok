@@ -1,4 +1,4 @@
-use v6.d;
+use v6;
 
 # mi6 has it's own opinion
 #![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
@@ -93,8 +93,8 @@ For example: You want to know how many times a sub is wrapped - grok a golf to s
 #-------------------------------------------------------------------------------
 unit module Grok;
 
-use Grok::Wisp;
-use Grok::Utils :is-core-class, :header-line;
+use Kaolin::Wisp  :Wisp;
+use Kaolin::Utils :is-core-class, :header-line;
 
 # recursion control
 our $DEPTH;

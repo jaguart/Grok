@@ -6,6 +6,11 @@
   "build-depends": [
   ],
   "depends": [
+    "Kaolin::Cargo",
+    "Kaolin::Moppet",
+    "Kaolin::Node",
+    "Kaolin::Utils",
+    "Kaolin::Wisp"
   ],
   "description": "Introspection helpers - grok( Something, :deeply ); say wisp( Endian )",
   "license": "Artistic-2.0",

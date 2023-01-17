@@ -1,9 +1,8 @@
 use v6;
 
 use Test;
-plan 4;
+plan 3;
 
 use-ok 'Grok';
-use-ok 'Grok::Moppet';
-use-ok 'Grok::Wisp';
-use-ok 'Grok::Utils';
+use-ok 'Grok::DOM';
+use-ok 'Grok::DOM::Factory';

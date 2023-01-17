@@ -1,4 +1,4 @@
-use v6.d;
+use v6;
 #-------------------------------------------------------------------------------
 # Test Wisp.detail method - which is an alias for Wisp.gist($thing, :detail)
 #-------------------------------------------------------------------------------
@@ -11,7 +11,7 @@ plan 10;
 use lib $?FILE.IO.parent;
 use TestUtils;
 
-use Grok::Wisp;
+use Kaolin::Wisp :Wisp;
 
 our %SEEN = ();
 

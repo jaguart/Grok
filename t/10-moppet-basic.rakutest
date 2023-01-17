@@ -4,8 +4,7 @@ use Test;
 
 plan 0;
 
-
-use Grok::Moppet;
+use Kaolin::Moppet :Moppet;
 
 # TODO: Make some Moppet tests...
 

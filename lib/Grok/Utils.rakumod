@@ -1,6 +1,8 @@
-use v6.d+;
+use v6;
 
 unit module Grok::Utils;
+
+die { 'moved to Kaolin::Utils' };
 
 #sub is-type-class ( Mu $o --> Bool ) is export(:is-type-class) {
 #  return False if $o.DEFINITE;
