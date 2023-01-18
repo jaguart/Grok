@@ -13,7 +13,7 @@ use v6.d+;
 
 =head1 NAME
 
-grok, wisp - introspection helpers.
+Grok - The way of Raku - Introspection tools
 
 
 =head1 SYNOPSIS
