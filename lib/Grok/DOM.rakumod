@@ -1,4 +1,4 @@
-use v6;
+use v6.d+;
 
 use Kaolin::Node;
 use Kaolin::Wisp :Wisp;

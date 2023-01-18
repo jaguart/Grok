@@ -1,4 +1,4 @@
-use v6;
+use v6.d+;
 
 # mi6 has it's own opinion
 #![Build Status](https://github.com/jaguart/Grok/actions/workflows/test.yml/badge.svg)
