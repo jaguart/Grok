@@ -12,7 +12,7 @@
     "Kaolin::Utils",
     "Kaolin::Wisp"
   ],
-  "description": "Introspection helpers - grok( Something, :deeply ); say wisp( Endian )",
+  "description": "The way of Raku - Introspection tools",
   "license": "Artistic-2.0",
   "name": "Grok",
   "perl": "6.d",

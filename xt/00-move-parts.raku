@@ -1,4 +1,4 @@
-use v6;
+use v6.d+;
 
 # Move things from Skry into Grok
 # Get Grok to make DOM

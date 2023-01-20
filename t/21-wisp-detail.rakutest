@@ -18,6 +18,7 @@ our %SEEN = ();
 for (
   Enumeration                          ,
   Hash                                 ,
+  Int                                  ,
   Iterable                             ,
   Iterator                             ,
   List                                 ,

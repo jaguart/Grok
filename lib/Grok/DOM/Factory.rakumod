@@ -1,50 +1,126 @@
 use v6.d+;
 
-use Grok::DOM       :DOM;
+use Kaolin::Cargo   :Cargo;                 #= Carrier for node creation
+use Kaolin::Moppet  :Moppet;                #= Introspection
+use Kaolin::Utils   :CompUnit-from-file,    #= Load a CompUnit
+                    :is-class,              #= Is it a Class
+                    :is-role,
+                    :is-core-class,
+                    :is-package,
+                    ;
+use Kaolin::Wisp    :Wisp;                  #= Describe things consistently
 
-use Kaolin::Moppet  :Moppet;
-use Kaolin::Wisp    :Wisp;
-use Kaolin::Utils   :CompUnit-from-file;
+use Grok::DOM       :DOM;                   #= Document Object Model
 
-#------------------------------------------------------------------------------
+#==============================================================================
 #| Factory to create DOM - Grok::DOM::Factory.create( IO::Path:D $file ) etc.
 unit class Grok::DOM::Factory;
 
 
+#| helper for comparison of Module shortnames
+sub shortname ( Str $name ) {  $name.split('::').tail  }
 
-##------------------------------------------------------------------------------
-#our sub load-from-file ( IO::Path:D $file --> CompUnit ) {
-#    CompUnit-from-file( $file );
-#}
+has @!QUEUE;
+has %!DONE;
+has $!DEBUG = False;
 
 
-use Kaolin::Cargo :Cargo; # exports Cargo
-
-our $DEBUG = False;
-
-sub short-name ( Str $name ) {
-    $name.split('::').tail
-}
-
+#------------------------------------------------------------------------------
+#| DOM constructor - load and grok a CompUnit by filename
 multi method create ( IO::Path:D $file ) {
-    _make-node( CompUnit-from-file( $file ) );
+
+    %!DONE = Empty;
+
+    self._make-node( CompUnit-from-file( $file ) );
+
 }
 
-multi method create ( Mu \x, :$composition ) {
+#------------------------------------------------------------------------------
+#| DOM constructor - introspect Mu
+#| - **:deeply**  - recurse into parents, roles etc.
+#| - **:core**    - include core classes.
+#| - **:local**   - skip composed / imported methods.
+#| - **:detail**  - include extra detail.
+#| - **:where**   - True - show in-package, False - hide in-package, Default - show imported package names.
+#| - **:hide**    - hide this string, used by Scry to remove POD generation artifacts.
+multi method create (
+    Mu \x,
 
-    my $mop = Moppet.new(:thing(x));
+    :$ascend  is copy = False,
+    :$descend is copy = False,
+    :$deeply  = False,
 
-    my $wisp = Wisp.new(:thing(x));
-    #say ( $wisp.whom, $wisp.what, $wisp.where, $wisp.why );
+    :$local   = False,
+    :$filter  = Nil,
+
+    :$core    = False,
+    :$detail  = False,
+    :$hide    = Nil,
+
+    :$where   = Nil,
+
+) {
+
+    # Jeff 18-Jan-2023 new interface:
+    # ascend  -> go up - parents roles backlinks
+    # shallow -> exports knows properties attributes methods
+    # descend -> expand knows ...
+    # deeply  -> ascend and descend
+    # filter  -> callable, given THING True to include, False to exclude
+    #
+    # local   -> only local methods, probably not useful
+    # core    -> include core classes
+    # detail  -> display - what gets emitted - pass to DOM
+    # hide    -> display - filtering - pass to DOM
+
+    $ascend  = True if $deeply;
+    $descend = True if $deeply;
+
+    my \opt = \(
+        :$ascend  ,
+        :$descend ,
+        :$deeply  ,
+        :$local   ,
+        :$filter  ,
+        :$core    ,
+        :$detail  ,
+        :$hide    ,
+        :$where   ,
+    );
+    #say opt, "\n";
+
+    %!DONE = Empty;
+    @!QUEUE = Empty;
+
+    my $wisp    = Wisp.new(:thing(x));
+    my $mop     = $wisp.mop;
+    #say ( $wisp.whom, $wisp.what, $wisp.where, $wisp.whence, $wisp.wax, $wisp.why );
+
+    # root is always a container - we will probably add to it.
+    my $root = DOM.new( :name('grok: ' ~ $wisp.whom ) );
+
+    #
+    self._make-node( x, $root, |opt );
 
 
-    my $root = DOM.new( :name('grok: ' ~ $wisp.whom ) ) ;
-    _make-node( x, $root );
+    # ascend - these are parents and roles added during initial make-node...
+    if $ascend {
+        # no |opt -> we dont want these to get out of hand.
+        for $mop.parents.grep(&not-any-mu) {
+            %!DONE = Empty;
+            self._make-node( $_<>, $root, );
+        }
+        for $mop.roles {
+            %!DONE = Empty;
+            self._make-node( $_<>, $root, );
+        }
+    }
 
-    if $composition {
 
-        if my @parents = $mop.parents.grep({ $_.^name ne ('Any' | 'Mu') }) {
-            _make-node(
+    if False {
+
+        if my @parents = $mop.parents.grep(&not-any-mu) {
+            self._make-node(
                 Cargo.new(
                     :name('Parents'),
                     :parts( |@parents ),
@@ -54,7 +130,31 @@ multi method create ( Mu \x, :$composition ) {
         }
 
         if my @roles = $mop.roles {
-            _make-node(
+            self._make-node(
+                Cargo.new(
+                    :name('Roles'),
+                    :parts( |@roles ),
+                ),
+               $root,
+            );
+        }
+    }
+
+
+    if False {
+
+        if my @parents = $mop.parents.grep(&not-any-mu) {
+            self._make-node(
+                Cargo.new(
+                    :name('Parents'),
+                    :parts( |@parents ),
+                ),
+               $root,
+            );
+        }
+
+        if my @roles = $mop.roles {
+            self._make-node(
                 Cargo.new(
                     :name('Roles'),
                     :parts( |@roles ),
@@ -64,7 +164,7 @@ multi method create ( Mu \x, :$composition ) {
         }
 
         if my @knows = $mop.knows {
-            _make-node(
+            self._make-node(
                 Cargo.new(
                     :name('Knows'),
                     :parts( |@knows ),
@@ -79,28 +179,66 @@ multi method create ( Mu \x, :$composition ) {
 
 }
 
-multi sub _make-node ( Mu \x, $parent = Any ) is default {
+#==============================================================================
+# Subs only below here.
+#==============================================================================
+sub not-any-mu ( Mu $x ) { $x.^name ne ('Any' | 'Mu')  }
+
+
+
+multi method _make-node ( Mu \x,
+    $parent = Nil, |opt
+) is default {
+
+    return $parent if %!DONE{x.WHICH}++;
 
     #return $node if %GROKED{$x.WHICH}++;
-    say 'grok Mu: ', x.HOW.^name, ' ', x.^name, ' ', x.gist if $DEBUG;
+    say 'grok Mu: ', x.HOW.^name, ' ', x.^name, ' ', x.gist if $!DEBUG;
 
-    my $mop    = Moppet.new(:thing(x));
+    my $wisp   = Wisp.new(:thing(x));
+    my $mop    = $wisp.mop; # hmmm Moppet.new(:thing(x));
 
-    my $node = $parent  ?? $parent.add-kid( :thing(x) )
-                        !! DOM.new( :thing(x) );
+    my $node = $parent  ?? $parent.add-kid( :$wisp )
+                        !! DOM.new( :$wisp );
 
-    if $mop.parents.grep({ $_.^name ne ('Any' | 'Mu') }) {
-        _make-node(
+    # NO descent because we DONT pass on opt
+    # and we use Cargo.values
+
+    self._make-props( x, $node, $mop, |opt );
+    self._make-parts( x, $node, $mop, |opt );
+
+
+    $parent // $node;
+
+}
+
+sub is-descendant ( \x --> Bool ) {
+    my $value := x ~~ Pair ?? x.value<> !! x;
+
+    return False if is-core-class($value);
+    return False if $value.^name eq 'EXPORT';
+
+    #dd $x.value; say 'not core ', $x.value.^name;
+    return True if is-class( $value );
+    return True if is-role( $value );
+
+    False;
+}
+
+method _make-parts ( Mu \x, $node, $mop, |opt ) {
+
+    if $mop.parents.grep(&not-any-mu) {
+        self._make-node(
             Cargo.new(
                 :name('Parents'),
-                :values( $mop.parents.grep({ $_.^name ne ('Any | Mu') })),
+                :values( $mop.parents.grep(&not-any-mu)),
             ),
            $node,
         )
     }
 
     if $mop.roles {
-        _make-node(
+        self._make-node(
             Cargo.new(
                 :name('Roles'),
                 :values( $mop.roles ),
@@ -109,89 +247,168 @@ multi sub _make-node ( Mu \x, $parent = Any ) is default {
         )
     }
 
+
     if $mop.exports {
-        _make-node(
+        self._make-node(
             Cargo.new(
                 :name('Exports'),
                 :values( $mop.exports ),
             ),
            $node,
-        )
+        );
+        #@!QUEUE.append( $mop.exports );
     }
 
     # Knows AFTER exports to supress duplicate-knows
     if $mop.knows {
-        _make-node(
+        self._make-node(
             Cargo.new(
                 :name('Knows'),
                 :values( $mop.knows ),  # dont recurse into knows...
             ),
            $node,
-        )
+        );
+        #@!QUEUE.append( $mop.knows );
     }
 
-    if $mop.attributes {
-        _make-node(
-            Cargo.new(
-                :name('Attributes'),
-                :values( $mop.attributes ),
-            ),
-           $node,
-        )
+     {
+        if $mop.attributes {
+            self._make-node(
+                Cargo.new(
+                    :name('Attributes'),
+                    :values( $mop.attributes ),
+                ),
+               $node,
+            )
+        }
+
+        if $mop.methods {
+            self._make-node(
+                Cargo.new(
+                    :name('Methods'),
+                    :values( $mop.methods ),
+                ),
+               $node,
+            )
+        }
     }
 
-    if $mop.methods {
-        _make-node(
-            Cargo.new(
-                :name('Methods'),
-                :values( $mop.methods ),
-            ),
-           $node,
-        )
+    if opt<descend> {
+        if my @interesting = $mop.knows.grep(&is-descendant) {
+
+            # Allow these to be descended into.
+            #dd %!DONE;
+            %!DONE{$_}:delete for @interesting.values.map({$_ ~~ Pair ?? $_.value.WHICH !! $_.WHICH});
+            #.say for @interesting.values.map({$_ ~~ Pair ?? $_.value.WHICH !! $_.WHICH});
+            #dd %!DONE;
+
+
+            self._make-node(
+                Cargo.new(
+                    :name('Contains'),
+                    :parts( |@interesting ), # recurse into these
+                ),
+               $node,
+            );
+            #@!QUEUE.append( $mop.knows );
+        }
     }
 
 
 }
 
+multi method xx_make-props ( Mu \x,
+    $node,
+    |opt
+) {
+    say x.gist, ' has no properties';
+    return $node;
+}
 
 #---------------------------------------------------------------------------
-# We use the Cargo class to package things up for easier grokking
-# It has .name .descr .thing .values .parts
-multi sub _make-node ( Kaolin::Cargo:D \x, $parent = Any ) {
+#| We use Cargo to wrap things up for easier grokking.
+#| It has .name .descr .thing .values .parts.
+#| .values are always :shallow
+#| .parts  are always :descend
+multi method _make-node ( Cargo:D $cargo, $parent = Nil, :$ascend, :$descend, ) {
 
     #return $node if %GROKED{$x.WHICH}++;
 
-    say 'grok Cargo: ', x.name, ' ', x.descr if $DEBUG;
+    say 'grok Cargo: ', $cargo.name, ' ', $cargo.descr if $!DEBUG;
 
-    my \args = \(
-                :name(x.name),
-                :thing(x.thing),
-                :content( x.descr // () ),
-                );
+    # TODO: NOT WORKING FOR WISPS
+    my @values;
+    @values.append( $cargo.values.grep({
+        my $value = $_ ~~ Pair ?? $_.value<> !! $_<>;
+        %!DONE{$value.WHICH} ?? False !! True
+        }).flat );
+    #dd @values;
 
-    my $node = $parent  ?? $parent.add-kid( :name(x.name) )
-                        !! DOM.new( :name(x.name) );
+    my @parts;
+    @parts.append( $cargo.parts.grep({
+        my $value = $_ ~~ Pair ?? $_.value<> !! $_<>;
+        %!DONE{$value.WHICH} ?? False !! True
+        }).flat );
+    #if @parts {
+    #    dd @parts;
+    #    dd %!DONE;
+    #    $!DEBUG = True;
+    #}
 
 
-    #my $node = $parent ?? $parent.add-kid( |args ) !! $?CLASS.new( |args );
+    return $parent unless @parts or @values;
 
-    for x.values -> $y {
+    # The Cargo.name node to act as an identifying collection.
+    my $node = $parent  ?? $parent.add-kid( :name($cargo.name) )
+                        !! DOM.new(         :name($cargo.name) );
 
-        if $y ~~ Pair {
-            $node.add-kid(
-                :name($y.key<>),
-                :thing($y.value<>),
-            );
+
+    # Jeff 18-Jan-2023 values are flat - i.e. no descent
+    for @values -> $x {
+        given $x {
+            when Pair {
+                next if %!DONE{$x.value<>.WHICH}++;
+                my $name = $x.key;
+                $name = $x.value.^name if try $name eq $x.value.^shortname;
+                $node.add-kid( Wisp.new( :thing($x.value<>), :ident($name) ) );
+            }
+            when Wisp {
+                next if %!DONE{$x.thing<>.WHICH}++;
+                $node.add-kid( $x );
+            }
+            default {
+                next if %!DONE{$x.WHICH}++;
+                $node.add-kid( Wisp.new( :thing($x<>) ) );
+            }
+
         }
-        else {
-            $node.add-kid(
-                :thing($y<>),
-            );
-        }
+        #if $x ~~ Pair {
+        #    next if %!DONE{$x.value<>.WHICH}++;
+        #    my $name = $x.key;
+        #    $name = $x.value.^name if try $name eq $x.value.^shortname;
+        #    $node.add-kid( Wisp.new( :thing($x.value<>), :ident($name) ) );
+        #}
+        #else {
+        #    next if %!DONE{$x.WHICH}++;
+        #    $node.add-kid( Wisp.new( :thing($x<>) ) );
+        #}
     }
 
-    for x.parts -> $y {
-        _make-node( $y ~~ Pair ?? $y.value<> !! $y<>, $node );
+    # Jeff 18-Jan-2023 parts are always descended into
+
+    for @parts -> $x {
+        # Hmmm we lose the ident here
+        #dd $x;
+
+        # in case an interesting part was mentioned by a sibling...
+        if $cargo.name eq 'Contains' {
+            %!DONE{$_}:delete for @parts.map({$_ ~~ Pair ?? $_.value.WHICH !! $_.WHICH});
+        }
+
+        self._make-node(
+            ($x ~~ Pair ?? $x.value<> !! $x<>),
+            $node
+        );
     }
 
     $parent // $node
@@ -200,20 +417,20 @@ multi sub _make-node ( Kaolin::Cargo:D \x, $parent = Any ) {
 
 
 #---------------------------------------------------------------------------
-multi sub _make-node ( CompUnit \x , $parent = Nil ) {
+multi method _make-node ( CompUnit \x , $parent = Nil,  :$ascend, :$descend, ) {
 
-    say 'grok CompUnit: ', x.short-name if $DEBUG;
+    return $parent if %!DONE{x.WHICH}++;
+
+    say 'grok CompUnit: ', x.short-name if $!DEBUG;
 
     my $node = $parent  ?? $parent.add-kid( x )
                         !! DOM.new( x );
 
     $node.add-kid(
-        :name('repo.prefix'),
-        :thing( x.repo.prefix ),
-        :content(x.repo.prefix.Str)
+        Wisp.new( :thing(x.repo.prefix), :ident('repo.prefix') )
     ) if try x.repo.prefix;
 
-    $node.add-kid( :name($_<>), :thing(x."$_"() ) )
+    $node.add-kid( Wisp.new(:ident($_<>), :thing(x."$_"() ) ) )
         for <
             short-name
             repo-id
@@ -226,7 +443,7 @@ multi sub _make-node ( CompUnit \x , $parent = Nil ) {
     # delve into Distribution for this run/compunit
     # Note that this may NOT be the distribution of the CompUnit
     # if you are running in a folder with a META6.json
-    _make-node( x.distribution, $node );
+    self._make-node( x.distribution, $node );
 
     # recurse into namespaces created by this compunit
     # GLOBALish is the set of namespaces that were merged into GLOBAL::
@@ -238,7 +455,7 @@ multi sub _make-node ( CompUnit \x , $parent = Nil ) {
         .sort({ $^a.HOW.^name cmp $^b.HOW.^name or $^a.^name cmp $^b.^name })
         -> $namespace {
          #say 'name: ', $namespace.HOW.^name, ' ', $namespace.^name;
-        _make-node( $namespace, $node );
+        self._make-node( $namespace, $node );
     }
 
     $parent // $node
@@ -246,20 +463,22 @@ multi sub _make-node ( CompUnit \x , $parent = Nil ) {
 }
 
 #---------------------------------------------------------------------------
-multi sub _make-node ( CompUnit::Repository::Distribution \x , $parent = Any ) {
+multi method _make-node ( CompUnit::Repository::Distribution \x , $parent = Nil, :$ascend, :$descend, ) {
 
-    say 'grok Distributon: ', x.gist.substr(0,100) if $DEBUG;
+    return $parent if %!DONE{x.WHICH}++;
+
+    say 'grok Distributon: ', x.gist.substr(0,100) if $!DEBUG;
 
     my $node = $parent  ?? $parent.add-kid( x )
                         !! DOM.new( x );
 
     #_make-node( x.dist, $node );
-    $node.add-kid( :name('dist.Str'),       :thing(x.dist.Str) );
-    $node.add-kid( :name('dist.meta-file'), :thing(x.dist.meta-file) );
-    $node.add-kid( :name('dist.prefix'),    :thing(x.dist.prefix)  );
+    $node.add-kid( Wisp.new( :ident('dist.Str'),       :thing(x.dist.Str)       ));
+    $node.add-kid( Wisp.new( :ident('dist.meta-file'), :thing(x.dist.meta-file) ));
+    $node.add-kid( Wisp.new( :ident('dist.prefix'),    :thing(x.dist.prefix)    ));
 
     #        dist
-    $node.add-kid( :name($_), :thing(x."$_"() ) )
+    $node.add-kid( Wisp.new( :ident($_), :thing(x."$_"() ) ))
         for <
             id
             dist-id
@@ -268,7 +487,7 @@ multi sub _make-node ( CompUnit::Repository::Distribution \x , $parent = Any ) {
     # Collect the Meta under it's own named node
     # This includes hashes and arrays - should I expand those two?
     my $meta = $node.add-kid( :name('Meta') );
-    $meta.add-kid( :name($_.key), :thing($_.value) )
+    $meta.add-kid( Wisp.new( :ident($_.key), :thing($_.value) ))
         for x.meta.pairs.sort;
 
     $parent // $node
@@ -277,66 +496,66 @@ multi sub _make-node ( CompUnit::Repository::Distribution \x , $parent = Any ) {
 
 
 #---------------------------------------------------------------------------
-multi sub _make-node ( Mu \x where { $_.HOW ~~ ( Metamodel::ModuleHOW | Metamodel::PackageHOW ) }, $parent = Any ) {
+multi method _make-props ( Mu \x,
+    $node,
+    |opt
+) {
 
-    say 'grok Package/Module: ', x if $DEBUG;
+    #return $node if %!DONE{x.WHICH}++;
 
-    my $node = $parent  ?? $parent.add-kid( x )
-                        !! DOM.new( x );
+    say 'grok Package/Module properties: ', x if $!DEBUG;
+
+    my $mop = Moppet.new(:thing(x));
 
     # Jeff 17-Jan-2023 weirdly, the order in which we get called
     # affects whether .^ver and .^auth are populated
 
     # Own ver first, then HOW ver - a bit confused as to whether there is ever
     # an own.ver - maybe when grokking a Module defined in memory
-    if try x.ver {
-        $node.add-kid( :name( 'ver'     ), :thing( x.ver      ) ) if try x.ver;
-        $node.add-kid( :name( 'api'     ), :thing( x.api      ) ) if try x.api;
-        $node.add-kid( :name( 'auth'    ), :thing( x.auth     ) ) if try x.auth;
-        $node.add-kid( :name( 'version' ), :thing( x.version  ) ) if try x.version;
-    }
-    elsif try x.^ver {
-        $node.add-kid( :name( 'ver'     ), :thing( x.^ver     ) ) if try x.^ver;
-        $node.add-kid( :name( 'api'     ), :thing( x.^api     ) ) if try x.^api;
-        $node.add-kid( :name( 'auth'    ), :thing( x.^auth    ) ) if try x.^auth;
-        $node.add-kid( :name( 'version' ), :thing( x.^version ) ) if try x.^version;
-    }
+    my @props;
+    @props.append( Wisp.new( :ident( 'ver' ), :thing( $mop.ver  ))) if $mop.ver;
+    @props.append( Wisp.new( :ident( 'api' ), :thing( $mop.api  ))) if $mop.api;
+    @props.append( Wisp.new( :ident( 'auth'), :thing( $mop.auth ))) if $mop.auth;
+    @props.append( Wisp.new( :ident( 'why' ), :thing( $mop.why  ))) if $mop.why;
+    @props.append( Wisp.new( :ident( 'archetypes' ), :thing( $mop.archetypes  ))) if $mop.archetypes;
+    @props.append( Wisp.new( :ident( 'lang' ), :thing( $mop.language-version  ))) if $mop.language-version;
 
-    my $mop = Moppet.new(:thing(x));
-    _make-node( $_, $node ) for $mop.knows;
-
-    #{
-    #    say 'line: ', $?LINE;
-    #    grok(x);
-    #
-    #} if $mop.exports;
-
-    $parent // $node;
+    # Jeff 19-Jan-2023 not yet working...
+    #say x.gist, x.^name, x.HOW.^name;
+    #say $mop.archetypes;
+    #say $mop.language-version;
 
 
+    self._make-node(
+        Cargo.new(
+            :name('Properties'),
+            :values( |@props ),
+        ),
+       $node,
+    )
+    if @props;
 
 }
 
 #---------------------------------------------------------------------------
-multi sub _make-node ( Pair:D \x, $parent ) {
+multi method x_make-node ( Pair:D \x, $parent = Nil, :$ascend, :$descend, ) {
 
     #return $node if %GROKED{$x.WHICH}++;
 
-    say 'grok - Pair ', x if $DEBUG;
-
-
-    my $wv = Wisp.new(:thing(x.value));
+    say 'grok - Pair ', x.raku if $!DEBUG or True;
 
     my $name = x.key.subst(/^\&/,''); # sub-names, sigh
 
+    my $wv = Wisp.new(:thing(x.value<>),:ident($name));
+
     my $node;
 
-    if  $name ne short-name($wv.mop.var-name) and
-        $name ne short-name($wv.mop.name) {
+    if  False and $name ne shortname($wv.mop.var-name) and
+        $name ne shortname($wv.mop.name) {
         # We only create a Pair node if the value does NOT have a name
 
         say 'key: ', $name, ' not in ', $wv.mop.var-name.raku , ' or ', $wv.mop.name.raku, ' - ', $wv.mop.type
-            if $DEBUG;
+            if $!DEBUG or True;
 
         $node = $parent ?? $parent.add-kid( x )
                         !! DOM.new( x );
@@ -346,11 +565,11 @@ multi sub _make-node ( Pair:D \x, $parent ) {
 
         if $wv.mop.is-core {
             #say 'skipped pair node: ', x.gist;
-            $node = $parent ?? $parent.add-kid( :name(x.key), :thing(x.value<>) )
-                            !! DOM.new(   :name(x.key), :thing(x.value<>) );
+            $node = $parent ?? $parent.add-kid( $wv )
+                            !! DOM.new( $wv );
         }
         else {
-            _make-node( x.value, $node // $parent );
+            self._make-node( x.value, $node // $parent );
         }
     }
 
@@ -362,3 +581,4 @@ multi sub _make-node ( Pair:D \x, $parent ) {
 
 }
 
+#==============================================================================

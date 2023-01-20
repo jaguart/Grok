@@ -93,6 +93,8 @@ For example: You want to know how many times a sub is wrapped - grok a golf to s
 #-------------------------------------------------------------------------------
 unit module Grok;
 
+use Grok::DOM::Factory;
+
 use Kaolin::Wisp  :Wisp;
 use Kaolin::Utils :is-core-class, :header-line;
 
@@ -110,12 +112,29 @@ our %SEEN;
 #| - **:hide**    - hide this string, used by Scry to remove POD generation artifacts.
 sub grok (
     Mu $thing is raw,
+    #:$deeply  = False,
+    #:$core    = False,
+    #:$local   = False,
+    #:$detail  = False,
+    #:$where   = Nil,
+    #:$hide    = Nil,
+
+
+    :$ascend  = False,
+    :$descend = False,
     :$deeply  = False,
-    :$core    = False,
+
     :$local   = False,
+    :$filter  = Nil,
+
+    :$core    = False,
     :$detail  = False,
-    :$where   = Nil,
     :$hide    = Nil,
+
+    :$where   = Nil,
+
+
+
   ) is export(:DEFAULT,:grok) {
 
 
@@ -135,7 +154,22 @@ sub grok (
   #    .join(' ') || 'defaults',
   #    ;
 
-  _grok( $thing, :$deeply, :$core, :$local, :$detail, :$where, :$hide );
+  #_grok( $thing, :$deeply, :$core, :$local, :$detail, :$where, :$hide );
+
+  my $dom = Grok::DOM::Factory.new.create(
+                $thing,
+                :$ascend,
+                :$descend,
+                :$deeply,
+                :$local,
+                :$filter,
+                :$core,
+                :$detail,
+                :$hide,
+                :$where,
+            );
+  $dom.dump( :plain );
+  say $dom;
 
 }
 

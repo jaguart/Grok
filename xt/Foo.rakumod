@@ -11,7 +11,7 @@ say $name;
 
 
 #| I am Foo!
-module Foo:ver<0.0.2>:api<1.2>:auth<zef:jaguart> {
+module Foo:ver<0.1.3>:api<1.2>:auth<zef:jaguart> {
 
   our Str constant θ = " " x 4; # Just a tab
 
@@ -28,7 +28,7 @@ module Foo:ver<0.0.2>:api<1.2>:auth<zef:jaguart> {
     'bar';
   }
 
-  role EvenMore {
+  role EvenMore:api<1>:ver<3.2.5>:auth<zef:jef> {
     has Str $!more-or-less;
     multi method even-more () { say 'even-more' }
   }
@@ -68,7 +68,7 @@ module Foo:ver<0.0.2>:api<1.2>:auth<zef:jaguart> {
   }
 
   #| No-one really loves an innie.
-  class Innie
+  class Innie:api<0.5>
     is Button
     is rw
     does Notable
@@ -110,12 +110,12 @@ module Foo:ver<0.0.2>:api<1.2>:auth<zef:jaguart> {
 
 }
 
-class Bar:auth<zef:jaguart>:ver<0.0.3> {
+class Bar:auth<zef:jaguart>:ver<1.0.3> {
   has Int $.um = 3;
   has Str $.sh = 'sh';
 }
 
-class Bob::Apple:auth<zef:jaguart>:ver<0.0.4> {
+class Bob::Apple:auth<zef:jaguart>:ver<2.0.4> {
   has Int $.water = 3;
   has Str $.colour = 'red';
   multi method dunk () { ... }
