@@ -517,7 +517,7 @@ multi method _make-props ( Mu \x,
     @props.append( Wisp.new( :ident( 'api' ), :thing( $mop.api  ))) if $mop.api;
     @props.append( Wisp.new( :ident( 'auth'), :thing( $mop.auth ))) if $mop.auth;
     @props.append( Wisp.new( :ident( 'why' ), :thing( $mop.why  ))) if $mop.why;
-    @props.append( Wisp.new( :ident( 'archetypes' ), :thing( $mop.archetypes  ))) if $mop.archetypes;
+    @props.append( Wisp.new( :ident( 'archetypes' ), :thing( $mop.archetypes.join(' ')  ))) if $mop.archetypes;
     @props.append( Wisp.new( :ident( 'lang' ), :thing( $mop.language-version  ))) if $mop.language-version;
 
     # Jeff 19-Jan-2023 not yet working...
